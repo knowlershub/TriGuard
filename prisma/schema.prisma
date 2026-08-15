@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String                    @id @default(cuid())
+  whatsappId    String?                   @unique
+  telegramId    String?                   @unique
+  displayName   String?
+  createdAt     DateTime                  @default(now())
+  emailAccount  EmailAccount?
+  emailLogs     EmailLog[]
+  expenses      Expense[]
+  pendingEvents PendingCrossModuleEvent[]
+  tasks         Task[]
+
+  @@map("users")
+}
+
+model EmailAccount {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  provider     String
+  accessToken  String
+  refreshToken String
+  expiresAt    DateTime
+  emailAddress String
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, provider])
+  @@map("email_accounts")
+}
+
+model Expense {
+  id         String   @id @default(cuid())
+  userId     String
+  amount     Decimal
+  currency   String   @default("NGN")
+  category   String?
+  merchant   String?
+  source     String
+  rawInput   String?
+  parsedBy   String?
+  occurredAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("expenses")
+}
+
+model Task {
+  id        String    @id @default(cuid())
+  userId    String
+  title     String
+  priority  String    @default("medium")
+  dueAt     DateTime?
+  source    String?
+  isDone    Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("tasks")
+}
+
+model EmailLog {
+  id           String   @id @default(cuid())
+  userId       String
+  subject      String?
+  summary      String?
+  detectedType String?
+  routedTo     String?
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("email_logs")
+}
+
+model PendingCrossModuleEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  eventType String
+  payload   String
+  status    String   @default("pending_module")
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("pending_cross_module_events")
+}
