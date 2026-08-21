@@ -1,0 +1,1 @@
+import SpendingBreakdown from "@/components/expenses/SpendingBreakdown";

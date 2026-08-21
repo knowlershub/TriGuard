@@ -8,16 +8,17 @@ datasource db {
 }
 
 model User {
-  id            String                    @id @default(cuid())
-  whatsappId    String?                   @unique
-  telegramId    String?                   @unique
-  displayName   String?
-  createdAt     DateTime                  @default(now())
-  emailAccount  EmailAccount?
-  emailLogs     EmailLog[]
-  expenses      Expense[]
-  pendingEvents PendingCrossModuleEvent[]
-  tasks         Task[]
+  id                     String                    @id @default(cuid())
+  whatsappId             String?                   @unique
+  telegramId             String?                   @unique
+  displayName            String?
+  createdAt              DateTime                  @default(now())
+  emailAccount           EmailAccount?
+  emailLogs              EmailLog[]
+  expenses               Expense[]
+  pendingEvents          PendingCrossModuleEvent[]
+  tasks                  Task[]
+  notificationPreference NotificationPreference?
 
   @@map("users")
 }
@@ -95,4 +96,20 @@ model PendingCrossModuleEvent {
 
   @@index([userId])
   @@map("pending_cross_module_events")
+}
+
+model NotificationPreference {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  emailNotifications Boolean  @default(true)
+  leakAlerts         Boolean  @default(true)
+  taskReminders      Boolean  @default(true)
+  subscriptionAlerts Boolean  @default(true)
+  dailyDigest        Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("notification_preferences")
 }
