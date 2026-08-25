@@ -26,10 +26,6 @@ export default function DashboardHeader({
     ? displayName.trim().split(/\s+/)[0]
     : null;
 
-  const initials = firstName
-    ? firstName.slice(0, 2).toUpperCase()
-    : "TG";
-
   return (
     <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
@@ -60,34 +56,43 @@ export default function DashboardHeader({
             className="flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
           >
             <span
-              className={refreshing ? "animate-spin" : ""}
+              className={
+                refreshing ? "animate-spin" : ""
+              }
               aria-hidden="true"
             >
               ↻
             </span>
 
-            {refreshing ? "Refreshing" : "Refresh"}
+            {refreshing
+              ? "Refreshing"
+              : "Refresh"}
           </button>
         )}
 
         <Link
           href="/dashboard/notifications"
-          className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
           aria-label="Open notifications"
-          title="Notifications"
+          className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
         >
-          <span aria-hidden="true">🔔</span>
+          <span aria-hidden="true">
+            🔔
+          </span>
 
-          <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />
+          <span
+            className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500"
+            aria-label="Notifications available"
+          />
         </Link>
 
         <Link
           href="/dashboard/profile"
-          className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-sm font-bold text-white transition hover:bg-slate-800"
           aria-label="Open profile"
-          title="Profile"
+          className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-sm font-bold text-white transition hover:bg-slate-800"
         >
-          {initials}
+          {firstName
+            ? firstName.slice(0, 2).toUpperCase()
+            : "TG"}
         </Link>
       </div>
     </header>

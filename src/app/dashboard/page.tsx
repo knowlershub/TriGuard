@@ -1,55 +1,29 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 
 import Sidebar from "@/components/layout/Sidebar";
 import MobileNav from "@/components/layout/MobileNav";
-
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
-import SpendingCard from "@/components/dashboard/SpendingCard";
-import TaskCard from "@/components/dashboard/TaskCard";
-import LeakAlert from "@/components/dashboard/LeakAlert";
-import RecentActivity from "@/components/dashboard/RecentActivity";
-import DailyBrief from "@/components/dashboard/DailyBrief";
-import QuickActions from "@/components/dashboard/QuickActions";
-import CommandBar from "@/components/dashboard/CommandBar";
-import CategorySpending from "@/components/dashboard/CategorySpending";
 
 import {
   getDashboardData,
   type DashboardData,
 } from "@/lib/dashboardApi";
 
-function LoadingState() {
-  return (
-    <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-3">
-        {[1, 2, 3].map((item) => (
-          <div
-            key={item}
-            className="h-32 animate-pulse rounded-2xl bg-slate-200"
-          />
-        ))}
-      </div>
-
-      <div className="h-24 animate-pulse rounded-2xl bg-slate-200" />
-
-      <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
-        <div className="h-64 animate-pulse rounded-2xl bg-slate-200" />
-        <div className="h-64 animate-pulse rounded-2xl bg-slate-200" />
-      </div>
-    </div>
-  );
-}
-
 export default function DashboardPage() {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
+  const [data, setData] =
+    useState<DashboardData | null>(null);
+
+  const [error, setError] =
+    useState<string | null>(null);
+
+  const [refreshing, setRefreshing] =
+    useState(false);
 
   async function loadDashboard() {
-    const testUserId = process.env.NEXT_PUBLIC_TEST_USER_ID;
+    const testUserId =
+      process.env.NEXT_PUBLIC_TEST_USER_ID;
 
     if (!testUserId) {
       throw new Error(
@@ -57,30 +31,38 @@ export default function DashboardPage() {
       );
     }
 
-    return getDashboardData(testUserId);
+    const freshData =
+      await getDashboardData(testUserId);
+
+    setData(freshData);
   }
 
-  async function refresh() {
-    setRefreshing(true);
-    setError(null);
-
-    try {
-      const freshData = await loadDashboard();
-      setData(freshData);
-    } catch (err) {
+  useEffect(() => {
+    loadDashboard().catch((err) => {
       setError(
         err instanceof Error
           ? err.message
           : "Failed to load dashboard."
       );
+    });
+  }, []);
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    setError(null);
+
+    try {
+      await loadDashboard();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to refresh dashboard."
+      );
     } finally {
       setRefreshing(false);
     }
   }
-
-  useEffect(() => {
-    refresh();
-  }, []);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -89,342 +71,290 @@ export default function DashboardPage() {
 
         <main className="min-w-0 flex-1 pb-24 lg:pb-0">
           <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-            <DashboardHeader
-              displayName={data?.user.displayName}
-              onRefresh={refresh}
-              refreshing={refreshing}
-            />
+            {!data && !error && (
+              <div className="space-y-6">
+                <div className="h-32 animate-pulse rounded-2xl bg-slate-200" />
 
-            {error && (
-              <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
-                <p className="font-semibold">
-                  Unable to load dashboard
-                </p>
+                <div className="grid gap-4 md:grid-cols-3">
+                  {[1, 2, 3].map((item) => (
+                    <div
+                      key={item}
+                      className="h-32 animate-pulse rounded-2xl bg-slate-200"
+                    />
+                  ))}
+                </div>
 
-                <p className="mt-1">{error}</p>
+                <div className="h-64 animate-pulse rounded-2xl bg-slate-200" />
               </div>
             )}
 
-            {!data && !error && <LoadingState />}
+            {error && (
+              <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
+                {error}
+              </div>
+            )}
 
             {data && (
               <>
+                {/* Early access notice */}
+                <div className="mb-6 rounded-2xl border border-blue-200 bg-blue-50 px-5 py-4">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-blue-950">
+                        TriGuard Early Access
+                      </p>
+
+                      <p className="mt-1 text-sm text-blue-800">
+                        You&apos;re using an early version of
+                        TriGuard. Some integrations and account
+                        features are still coming soon.
+                      </p>
+                    </div>
+
+                    <span className="w-fit rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-blue-700">
+                      Early access
+                    </span>
+                  </div>
+                </div>
+
+                <DashboardHeader
+                  displayName={data.user.displayName}
+                  onRefresh={handleRefresh}
+                  refreshing={refreshing}
+                />
+
+                {/* Summary */}
                 <section className="grid gap-4 md:grid-cols-3">
-                  <SpendingCard
-                    amount={data.summary.monthTotal}
+                  <SummaryCard
                     label="Spent this month"
-                    change={data.summary.monthChange}
-                    previousAmount={
-                      data.summary.previousMonthTotal
-                    }
-                    transactionCount={
-                      data.summary.transactionCount
-                    }
-                  />
-
-                  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <div className="mb-4 flex items-start justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-slate-500">
-                          Leak alerts
-                        </p>
-
-                        <p className="mt-1 text-2xl font-bold text-slate-950">
-                          {data.leaks.length}
-                        </p>
-                      </div>
-
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-                        ⚠
-                      </div>
-                    </div>
-
-                    <p
-                      className={`text-sm font-medium ${
-                        data.leaks.length > 0
-                          ? "text-amber-700"
-                          : "text-emerald-700"
-                      }`}
-                    >
-                      {data.leaks.length > 0
-                        ? `${data.leaks.length} alert${
-                            data.leaks.length === 1
-                              ? ""
-                              : "s"
-                          }`
-                        : "No leaks detected"}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <div className="mb-4 flex items-start justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-slate-500">
-                          Active tasks
-                        </p>
-
-                        <p className="mt-1 text-2xl font-bold text-slate-950">
-                          {data.summary.activeTaskCount}
-                        </p>
-                      </div>
-
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                        ✓
-                      </div>
-                    </div>
-
-                    <p className="text-sm font-medium text-emerald-700">
-                      {data.summary.dueSoonTaskCount} due soon
-                    </p>
-                  </div>
-                </section>
-
-                {data.leaks.length > 0 && (
-                  <section className="mt-6 space-y-3">
-                    {data.leaks.slice(0, 3).map((leak) => (
-                      <LeakAlert
-                        key={leak.category}
-                        category={leak.category}
-                        percentage={leak.percentage}
-                        message={`You've spent ${leak.percentage}% more on ${leak.category.toLowerCase()} than the previous month.`}
-                      />
-                    ))}
-                  </section>
-                )}
-
-                <section className="mt-6">
-                  <QuickActions onUpdated={setData} />
-                </section>
-
-                <section className="mt-6">
-                  <CommandBar onUpdated={setData} />
-                </section>
-
-                <section className="mt-6 grid gap-6 xl:grid-cols-[1.35fr_1fr]">
-                  <CategorySpending
-                    expenses={data.expenses}
-                  />
-
-                  <DailyBrief
-                    monthTotal={data.summary.monthTotal}
-                    activeTasks={data.summary.activeTaskCount}
-                    importantEmails={
-                      data.summary.actionRequiredEmails
+                    value={`₦${data.summary.monthTotal.toLocaleString(
+                      "en-NG"
+                    )}`}
+                    description={
+                      data.summary.monthChange >= 0
+                        ? `${data.summary.monthChange}% from last month`
+                        : `${Math.abs(
+                            data.summary.monthChange
+                          )}% lower than last month`
                     }
                   />
-                </section>
 
-                <section className="mt-6 grid gap-6 xl:grid-cols-[1.6fr_1fr]">
-                  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <div className="mb-4 flex items-center justify-between">
-                      <div>
-                        <h2 className="font-semibold text-slate-950">
-                          Priority tasks
-                        </h2>
-
-                        <p className="mt-0.5 text-xs text-slate-500">
-                          What needs doing
-                        </p>
-                      </div>
-
-                      <Link
-                        href="/dashboard/tasks"
-                        className="text-xs font-semibold text-blue-600 hover:text-blue-700"
-                      >
-                        View all
-                      </Link>
-                    </div>
-
-                    {data.tasks.length === 0 ? (
-                      <div className="py-8 text-center">
-                        <p className="font-medium text-slate-700">
-                          No open tasks
-                        </p>
-
-                        <p className="mt-1 text-sm text-slate-500">
-                          You&apos;re all caught up.
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {data.tasks.slice(0, 3).map((task) => (
-                          <TaskCard
-                            key={task.id}
-                            task={{
-                              id: task.id,
-                              title: task.title,
-                              due: task.dueAt
-                                ? new Date(
-                                    task.dueAt
-                                  ).toLocaleString(
-                                    "en-NG",
-                                    {
-                                      month: "short",
-                                      day: "numeric",
-                                      hour: "numeric",
-                                      minute: "2-digit",
-                                    }
-                                  )
-                                : "No deadline",
-                              priority:
-                                task.priority === "high"
-                                  ? "High"
-                                  : task.priority ===
-                                      "low"
-                                    ? "Low"
-                                    : "Medium",
-                            }}
-                          />
-                        ))}
-                      </div>
+                  <SummaryCard
+                    label="Active tasks"
+                    value={String(
+                      data.summary.activeTaskCount
                     )}
-                  </div>
+                    description={
+                      data.summary.dueSoonTaskCount > 0
+                        ? `${data.summary.dueSoonTaskCount} due soon`
+                        : "Nothing due soon"
+                    }
+                  />
 
-                  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <div className="mb-4 flex items-center justify-between">
-                      <div>
-                        <h2 className="font-semibold text-slate-950">
-                          Attention
-                        </h2>
+                  <SummaryCard
+                    label="Emails processed today"
+                    value={String(
+                      data.summary.emailProcessedToday
+                    )}
+                    description={
+                      data.summary.actionRequiredEmails > 0
+                        ? `${data.summary.actionRequiredEmails} need attention`
+                        : "Nothing requires attention"
+                    }
+                  />
+                </section>
 
-                        <p className="mt-0.5 text-xs text-slate-500">
-                          Things TriGuard wants you to notice
-                        </p>
-                      </div>
+                {/* Quick overview */}
+                <section className="mt-6 grid gap-6 lg:grid-cols-2">
+                  <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <div className="border-b border-slate-100 px-5 py-4">
+                      <h2 className="font-semibold text-slate-950">
+                        Money Guard
+                      </h2>
+
+                      <p className="mt-1 text-xs text-slate-500">
+                        Your recent spending picture.
+                      </p>
                     </div>
 
-                    <div className="space-y-3">
-                      {data.leaks.length > 0 && (
-                        <Link
-                          href="/dashboard/expenses"
-                          className="block rounded-xl border border-amber-200 bg-amber-50 p-4 transition hover:bg-amber-100"
-                        >
-                          <p className="text-sm font-semibold text-amber-950">
-                            {data.leaks.length} spending alert
+                    <div className="space-y-4 p-5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-slate-500">
+                          This week
+                        </span>
+
+                        <span className="font-semibold text-slate-900">
+                          ₦
+                          {data.summary.weekTotal.toLocaleString(
+                            "en-NG"
+                          )}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-slate-500">
+                          Transactions this month
+                        </span>
+
+                        <span className="font-semibold text-slate-900">
+                          {data.summary.transactionCount}
+                        </span>
+                      </div>
+
+                      {data.leaks.length > 0 ? (
+                        <div className="rounded-xl bg-red-50 p-4">
+                          <p className="text-sm font-semibold text-red-900">
+                            Spending leaks detected
+                          </p>
+
+                          <p className="mt-1 text-sm text-red-700">
+                            {data.leaks.length} category
                             {data.leaks.length === 1
                               ? ""
-                              : "s"}
+                              : "ies"} spending above baseline.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="rounded-xl bg-emerald-50 p-4">
+                          <p className="text-sm font-semibold text-emerald-900">
+                            Spending looks healthy
                           </p>
 
-                          <p className="mt-1 text-xs text-amber-800">
-                            Review your Money Guard activity.
+                          <p className="mt-1 text-sm text-emerald-700">
+                            No major spending leaks detected.
                           </p>
-                        </Link>
+                        </div>
                       )}
+                    </div>
+                  </div>
 
-                      {data.summary.dueSoonTaskCount > 0 && (
-                        <Link
-                          href="/dashboard/tasks"
-                          className="block rounded-xl border border-red-200 bg-red-50 p-4 transition hover:bg-red-100"
-                        >
-                          <p className="text-sm font-semibold text-red-950">
-                            {data.summary.dueSoonTaskCount} task
-                            {data.summary.dueSoonTaskCount === 1
-                              ? ""
-                              : "s"} due soon
-                          </p>
+                  <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <div className="border-b border-slate-100 px-5 py-4">
+                      <h2 className="font-semibold text-slate-950">
+                        Today&apos;s attention
+                      </h2>
 
-                          <p className="mt-1 text-xs text-red-800">
-                            Open Time Guard to review deadlines.
-                          </p>
-                        </Link>
-                      )}
+                      <p className="mt-1 text-xs text-slate-500">
+                        Things TriGuard thinks may need you.
+                      </p>
+                    </div>
 
-                      {data.summary.actionRequiredEmails > 0 && (
-                        <Link
-                          href="/dashboard/inbox"
-                          className="block rounded-xl border border-blue-200 bg-blue-50 p-4 transition hover:bg-blue-100"
-                        >
-                          <p className="text-sm font-semibold text-blue-950">
-                            {data.summary.actionRequiredEmails} email
-                            {data.summary.actionRequiredEmails ===
-                            1
-                              ? ""
-                              : "s"} need attention
-                          </p>
+                    <div className="space-y-3 p-5">
+                      <AttentionRow
+                        label="Tasks due today"
+                        value={
+                          data.summary.todayTaskCount
+                        }
+                        href="/dashboard/tasks"
+                      />
 
-                          <p className="mt-1 text-xs text-blue-800">
-                            Review InboxZero.
-                          </p>
-                        </Link>
-                      )}
+                      <AttentionRow
+                        label="Tasks due soon"
+                        value={
+                          data.summary.dueSoonTaskCount
+                        }
+                        href="/dashboard/tasks"
+                      />
 
-                      {data.leaks.length === 0 &&
-                        data.summary.dueSoonTaskCount === 0 &&
-                        data.summary.actionRequiredEmails ===
-                          0 && (
-                          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                            <p className="text-sm font-semibold text-emerald-950">
-                              You&apos;re in good shape
-                            </p>
+                      <AttentionRow
+                        label="Action-required emails"
+                        value={
+                          data.summary.actionRequiredEmails
+                        }
+                        href="/dashboard/inbox"
+                      />
 
-                            <p className="mt-1 text-xs text-emerald-800">
-                              Nothing important is currently demanding
-                              your attention.
-                            </p>
-                          </div>
-                        )}
+                      <AttentionRow
+                        label="Subscription alerts"
+                        value={
+                          data.summary.subscriptions
+                        }
+                        href="/dashboard/inbox"
+                      />
                     </div>
                   </div>
                 </section>
 
-                <section className="mt-6">
-                  <RecentActivity
-                    activities={data.activities}
-                  />
+                {/* Recent activity */}
+                <section className="mt-6 rounded-2xl border border-slate-200 bg-white shadow-sm">
+                  <div className="border-b border-slate-100 px-5 py-4">
+                    <h2 className="font-semibold text-slate-950">
+                      Recent activity
+                    </h2>
+
+                    <p className="mt-1 text-xs text-slate-500">
+                      The latest activity across TriGuard.
+                    </p>
+                  </div>
+
+                  {data.activities.length === 0 ? (
+                    <div className="px-5 py-12 text-center">
+                      <p className="font-medium text-slate-700">
+                        No recent activity
+                      </p>
+
+                      <p className="mt-1 text-sm text-slate-500">
+                        Activity will appear here as you use TriGuard.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-slate-100">
+                      {data.activities
+                        .slice(0, 6)
+                        .map((activity) => (
+                          <div
+                            key={activity.id}
+                            className="flex items-start gap-3 px-5 py-4"
+                          >
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-sm text-slate-600">
+                              {activity.type ===
+                              "expense"
+                                ? "₦"
+                                : activity.type ===
+                                    "task"
+                                  ? "✓"
+                                  : "✉"}
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium text-slate-900">
+                                {activity.title}
+                              </p>
+
+                              <p className="mt-1 text-sm text-slate-500">
+                                {activity.description}
+                              </p>
+                            </div>
+
+                            <span className="shrink-0 text-xs text-slate-400">
+                              {formatActivityTime(
+                                activity.time
+                              )}
+                            </span>
+                          </div>
+                        ))}
+                    </div>
+                  )}
                 </section>
 
-                <section className="mt-6 grid gap-4 md:grid-cols-3">
-                  <Link
-                    href="/dashboard/expenses"
-                    className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
-                  >
-                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                      ₦
+                {/* Coming soon */}
+                <section className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-white p-5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-semibold text-slate-950">
+                        More TriGuard features are coming soon
+                      </p>
+
+                      <p className="mt-1 text-sm text-slate-500">
+                        More integrations, account features, and automation
+                        will be added during early access.
+                      </p>
                     </div>
 
-                    <h3 className="font-semibold text-slate-900">
-                      Money Guard
-                    </h3>
-
-                    <p className="mt-1 text-sm text-slate-500">
-                      Review your spending and transactions.
-                    </p>
-                  </Link>
-
-                  <Link
-                    href="/dashboard/tasks"
-                    className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
-                  >
-                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                      ✓
-                    </div>
-
-                    <h3 className="font-semibold text-slate-900">
-                      Time Guard
-                    </h3>
-
-                    <p className="mt-1 text-sm text-slate-500">
-                      Keep deadlines and tasks under control.
-                    </p>
-                  </Link>
-
-                  <Link
-                    href="/dashboard/inbox"
-                    className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
-                  >
-                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
-                      ✉
-                    </div>
-
-                    <h3 className="font-semibold text-slate-900">
-                      InboxZero
-                    </h3>
-
-                    <p className="mt-1 text-sm text-slate-500">
-                      See the information that needs attention.
-                    </p>
-                  </Link>
+                    <span className="w-fit rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
+                      Coming soon
+                    </span>
+                  </div>
                 </section>
               </>
             )}
@@ -434,5 +364,72 @@ export default function DashboardPage() {
 
       <MobileNav />
     </div>
+  );
+}
+
+function SummaryCard({
+  label,
+  value,
+  description,
+}: {
+  label: string;
+  value: string;
+  description: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <p className="text-sm text-slate-500">
+        {label}
+      </p>
+
+      <p className="mt-2 text-2xl font-bold tracking-tight text-slate-950">
+        {value}
+      </p>
+
+      <p className="mt-1 text-xs text-slate-400">
+        {description}
+      </p>
+    </div>
+  );
+}
+
+function AttentionRow({
+  label,
+  value,
+  href,
+}: {
+  label: string;
+  value: number;
+  href: string;
+}) {
+  return (
+    <a
+      href={href}
+      className="flex items-center justify-between rounded-xl border border-slate-100 px-4 py-3 transition hover:bg-slate-50"
+    >
+      <span className="text-sm text-slate-600">
+        {label}
+      </span>
+
+      <span
+        className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+          value > 0
+            ? "bg-amber-50 text-amber-700"
+            : "bg-slate-100 text-slate-500"
+        }`}
+      >
+        {value}
+      </span>
+    </a>
+  );
+}
+
+function formatActivityTime(value: string) {
+  return new Date(value).toLocaleTimeString(
+    "en-NG",
+    {
+      hour: "2-digit",
+      minute: "2-digit",
+    }
   );
 }

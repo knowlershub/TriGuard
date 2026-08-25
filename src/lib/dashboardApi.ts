@@ -89,25 +89,108 @@ export type SaveReceiptExpenseInput = {
   rawText: string;
 };
 
+export type GmailConnectionStatus = {
+  connected: boolean;
+  emailAddress: string | null;
+  provider: string | null;
+  expired: boolean;
+  needsReauth: boolean;
+};
+
+/*
+ * Frontend request deduplication.
+ *
+ * Multiple dashboard components can mount at nearly the same time.
+ * These caches prevent Sidebar, InboxZero, Settings, etc. from
+ * hammering the database through duplicate requests.
+ */
+
+let dashboardDataPromise: Promise<DashboardData> | null = null;
+
+let dashboardDataCache:
+  | {
+      testUserId: string;
+      data: DashboardData;
+      expiresAt: number;
+    }
+  | null = null;
+
+let gmailStatusPromise: Promise<GmailConnectionStatus> | null =
+  null;
+
+let gmailStatusCache:
+  | {
+      testUserId: string;
+      data: GmailConnectionStatus;
+      expiresAt: number;
+    }
+  | null = null;
+
 export async function getDashboardData(
   testUserId: string
 ): Promise<DashboardData> {
-  const response = await fetch(
-    `/api/dashboard?testUserId=${encodeURIComponent(testUserId)}`,
-    {
-      cache: "no-store",
-    }
-  );
+  const now = Date.now();
 
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(
-      data?.error || "Failed to load dashboard"
-    );
+  if (
+    dashboardDataCache &&
+    dashboardDataCache.testUserId === testUserId &&
+    dashboardDataCache.expiresAt > now
+  ) {
+    return dashboardDataCache.data;
   }
 
-  return data as DashboardData;
+  if (dashboardDataPromise) {
+    return dashboardDataPromise;
+  }
+
+  dashboardDataPromise = (async () => {
+    try {
+      const response = await fetch(
+        `/api/dashboard?testUserId=${encodeURIComponent(
+          testUserId
+        )}`,
+        {
+          cache: "no-store",
+        }
+      );
+
+      const contentType =
+        response.headers.get("content-type") ?? "";
+
+      if (!contentType.includes("application/json")) {
+        const text = await response.text();
+
+        throw new Error(
+          `Dashboard API returned ${response.status} ${response.statusText}. Response starts with: ${text.slice(
+            0,
+            120
+          )}`
+        );
+      }
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error || "Failed to load dashboard"
+        );
+      }
+
+      const result = data as DashboardData;
+
+      dashboardDataCache = {
+        testUserId,
+        data: result,
+        expiresAt: Date.now() + 5_000,
+      };
+
+      return result;
+    } finally {
+      dashboardDataPromise = null;
+    }
+  })();
+
+  return dashboardDataPromise;
 }
 
 export async function sendCommand(
@@ -125,6 +208,20 @@ export async function sendCommand(
     }),
   });
 
+  const contentType =
+    response.headers.get("content-type") ?? "";
+
+  if (!contentType.includes("application/json")) {
+    const responseText = await response.text();
+
+    throw new Error(
+      `Command API returned ${response.status} ${response.statusText}. Response starts with: ${responseText.slice(
+        0,
+        120
+      )}`
+    );
+  }
+
   const data = await response.json();
 
   if (!response.ok) {
@@ -132,6 +229,12 @@ export async function sendCommand(
       data?.error || "Command failed"
     );
   }
+
+  /*
+   * A command can change dashboard data, so clear the short-lived
+   * dashboard cache after a successful command.
+   */
+  dashboardDataCache = null;
 
   return data;
 }
@@ -150,6 +253,20 @@ export async function saveReceiptExpense(
     }
   );
 
+  const contentType =
+    response.headers.get("content-type") ?? "";
+
+  if (!contentType.includes("application/json")) {
+    const responseText = await response.text();
+
+    throw new Error(
+      `Receipt API returned ${response.status} ${response.statusText}. Response starts with: ${responseText.slice(
+        0,
+        120
+      )}`
+    );
+  }
+
   const data = await response.json();
 
   if (!response.ok) {
@@ -158,6 +275,8 @@ export async function saveReceiptExpense(
         "Failed to save receipt expense."
     );
   }
+
+  dashboardDataCache = null;
 
   return data;
 }
@@ -183,6 +302,20 @@ export async function updateProfile(
     }),
   });
 
+  const contentType =
+    response.headers.get("content-type") ?? "";
+
+  if (!contentType.includes("application/json")) {
+    const responseText = await response.text();
+
+    throw new Error(
+      `Profile API returned ${response.status} ${response.statusText}. Response starts with: ${responseText.slice(
+        0,
+        120
+      )}`
+    );
+  }
+
   const data = await response.json();
 
   if (!response.ok) {
@@ -190,6 +323,12 @@ export async function updateProfile(
       data?.error || "Failed to update profile."
     );
   }
+
+  /*
+   * Profile changes affect the dashboard greeting.
+   * Clear the dashboard cache so the next read gets fresh data.
+   */
+  dashboardDataCache = null;
 
   return data;
 }
@@ -274,4 +413,73 @@ export async function updateNotificationPreferences(
   }
 
   return data.preferences as NotificationPreferences;
+}
+
+export async function getGmailConnectionStatus(
+  testUserId: string
+): Promise<GmailConnectionStatus> {
+  const now = Date.now();
+
+  if (
+    gmailStatusCache &&
+    gmailStatusCache.testUserId === testUserId &&
+    gmailStatusCache.expiresAt > now
+  ) {
+    return gmailStatusCache.data;
+  }
+
+  if (gmailStatusPromise) {
+    return gmailStatusPromise;
+  }
+
+  gmailStatusPromise = (async () => {
+    try {
+      const response = await fetch(
+        `/api/settings/connections/gmail?testUserId=${encodeURIComponent(
+          testUserId
+        )}`,
+        {
+          cache: "no-store",
+        }
+      );
+
+      const contentType =
+        response.headers.get("content-type") ?? "";
+
+      if (!contentType.includes("application/json")) {
+        const text = await response.text();
+
+        throw new Error(
+          `Gmail status API returned ${response.status} ${response.statusText}. Response starts with: ${text.slice(
+            0,
+            120
+          )}`
+        );
+      }
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error ||
+            "Failed to check Gmail connection."
+        );
+      }
+
+      const result =
+        data as GmailConnectionStatus;
+
+      gmailStatusCache = {
+        testUserId,
+        data: result,
+        expiresAt: Date.now() + 10_000,
+      };
+
+      return result;
+    } finally {
+      gmailStatusPromise = null;
+    }
+  })();
+
+  return gmailStatusPromise;
 }

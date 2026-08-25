@@ -1,6 +1,19 @@
 import { prisma } from "@/lib/prisma";
 
-export async function generateDailyDigest(userId: string): Promise<string> {
+export type DigestData = {
+  todayExpenses: { amount: number; category: string | null }[];
+  dueTasks: { title: string; dueAt: Date | null; priority: string }[];
+  pendingEvents: { eventType: string; payload: string }[];
+};
+
+/**
+ * Fetches the raw digest data (today's spending, due tasks, pending
+ * cross-module events) without any string formatting — used by both the
+ * WhatsApp /digest command (formatted below) and the /api/digest JSON
+ * endpoint (for the dashboard), so both stay in sync off one set of
+ * queries instead of duplicating them.
+ */
+export async function getDigestData(userId: string): Promise<DigestData> {
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
 
@@ -24,6 +37,19 @@ export async function generateDailyDigest(userId: string): Promise<string> {
     }),
   ]);
 
+  return {
+    todayExpenses: todayExpenses.map((e) => ({ amount: Number(e.amount), category: e.category })),
+    dueTasks,
+    pendingEvents,
+  };
+}
+
+/**
+ * Builds the chat-friendly digest reply for the WhatsApp /digest command.
+ */
+export async function generateDailyDigest(userId: string): Promise<string> {
+  const { todayExpenses, dueTasks, pendingEvents } = await getDigestData(userId);
+
   const sections: string[] = ["🗓️ Daily Digest"];
 
   sections.push(formatSpendingSection(todayExpenses));
@@ -40,15 +66,15 @@ function endOfToday(): Date {
 }
 
 function formatSpendingSection(
-  expenses: { amount: unknown; category: string | null }[]
+  expenses: { amount: number; category: string | null }[]
 ): string {
   if (expenses.length === 0) return "💰 Spending today: nothing logged yet.";
 
-  const total = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+  const total = expenses.reduce((sum, e) => sum + e.amount, 0);
   const byCategory = new Map<string, number>();
   for (const e of expenses) {
     const key = e.category ?? "uncategorized";
-    byCategory.set(key, (byCategory.get(key) ?? 0) + Number(e.amount));
+    byCategory.set(key, (byCategory.get(key) ?? 0) + e.amount);
   }
 
   const lines = [...byCategory.entries()]

@@ -39,18 +39,31 @@ const DEFAULT_PREFERENCES: NotificationPreferences = {
 };
 
 export default function NotificationsPage() {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [preferences, setPreferences] =
-    useState<NotificationPreferences>(DEFAULT_PREFERENCES);
+  const [data, setData] =
+    useState<DashboardData | null>(null);
 
-  const [error, setError] = useState<string | null>(null);
-  const [showAll, setShowAll] = useState(false);
+  const [preferences, setPreferences] =
+    useState<NotificationPreferences>(
+      DEFAULT_PREFERENCES
+    );
+
+  const [error, setError] =
+    useState<string | null>(null);
+
+  const [showAll, setShowAll] =
+    useState(false);
+
+  const [readNotifications, setReadNotifications] =
+    useState<Set<string>>(new Set());
 
   useEffect(() => {
-    const testUserId = process.env.NEXT_PUBLIC_TEST_USER_ID;
+    const testUserId =
+      process.env.NEXT_PUBLIC_TEST_USER_ID;
 
     if (!testUserId) {
-      setError("NEXT_PUBLIC_TEST_USER_ID is not configured.");
+      setError(
+        "NEXT_PUBLIC_TEST_USER_ID is not configured."
+      );
       return;
     }
 
@@ -58,10 +71,17 @@ export default function NotificationsPage() {
       getDashboardData(testUserId),
       getNotificationPreferences(testUserId),
     ])
-      .then(([dashboardData, notificationPreferences]) => {
-        setData(dashboardData);
-        setPreferences(notificationPreferences);
-      })
+      .then(
+        ([
+          dashboardData,
+          notificationPreferences,
+        ]) => {
+          setData(dashboardData);
+          setPreferences(
+            notificationPreferences
+          );
+        }
+      )
       .catch((err) => {
         setError(
           err instanceof Error
@@ -71,7 +91,9 @@ export default function NotificationsPage() {
       });
   }, []);
 
-  const notifications = useMemo<NotificationItem[]>(() => {
+  const notifications = useMemo<
+    NotificationItem[]
+  >(() => {
     if (!data) {
       return [];
     }
@@ -112,7 +134,8 @@ export default function NotificationsPage() {
             id: `overdue-${task.id}`,
             type: "task",
             title: `Overdue task: ${task.title}`,
-            description: "This task has passed its deadline.",
+            description:
+              "This task has passed its deadline.",
             timestamp: task.dueAt,
             href: "/dashboard/tasks",
             priority: "high",
@@ -130,16 +153,22 @@ export default function NotificationsPage() {
             id: `task-${task.id}`,
             type: "task",
             title: `Task due soon: ${task.title}`,
-            description: due.toLocaleString("en-NG", {
-              weekday: "short",
-              month: "short",
-              day: "numeric",
-              hour: "numeric",
-              minute: "2-digit",
-            }),
+            description: due.toLocaleString(
+              "en-NG",
+              {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+              }
+            ),
             timestamp: task.dueAt,
             href: "/dashboard/tasks",
-            priority: days <= 1 ? "high" : "medium",
+            priority:
+              days <= 1
+                ? "high"
+                : "medium",
           });
         }
       }
@@ -156,11 +185,14 @@ export default function NotificationsPage() {
         id: "action-emails",
         type: "email",
         title: `${data.summary.actionRequiredEmails} email${
-          data.summary.actionRequiredEmails === 1 ? "" : "s"
+          data.summary.actionRequiredEmails === 1
+            ? ""
+            : "s"
         } need your attention`,
         description:
           "InboxZero identified messages that may require an action.",
-        timestamp: new Date().toISOString(),
+        timestamp:
+          new Date().toISOString(),
         href: "/dashboard/inbox",
         priority: "high",
       });
@@ -177,31 +209,39 @@ export default function NotificationsPage() {
         id: "subscriptions",
         type: "subscription",
         title: `${data.summary.subscriptions} subscription alert${
-          data.summary.subscriptions === 1 ? "" : "s"
+          data.summary.subscriptions === 1
+            ? ""
+            : "s"
         }`,
         description:
           "Review recurring charges and subscription-related messages.",
-        timestamp: new Date().toISOString(),
+        timestamp:
+          new Date().toISOString(),
         href: "/dashboard/inbox",
         priority: "medium",
       });
     }
 
     /*
-     * Recent activity is informational and remains visible
-     * regardless of notification preferences.
+     * Recent activity remains visible regardless
+     * of notification preferences.
      */
-    for (const activity of data.activities.slice(0, 5)) {
+    for (const activity of data.activities.slice(
+      0,
+      5
+    )) {
       items.push({
         id: `activity-${activity.id}`,
         type: "activity",
         title: activity.title,
-        description: activity.description,
+        description:
+          activity.description,
         timestamp: activity.time,
         href:
           activity.type === "expense"
             ? "/dashboard/expenses"
-            : activity.type === "task"
+            : activity.type ===
+                "task"
               ? "/dashboard/tasks"
               : "/dashboard/inbox",
         priority: "low",
@@ -210,21 +250,35 @@ export default function NotificationsPage() {
 
     return items.sort(
       (a, b) =>
-        new Date(b.timestamp).getTime() -
-        new Date(a.timestamp).getTime()
+        new Date(
+          b.timestamp
+        ).getTime() -
+        new Date(
+          a.timestamp
+        ).getTime()
     );
   }, [data, preferences]);
 
-  const visibleNotifications = showAll
-    ? notifications
-    : notifications.slice(0, 8);
+  const visibleNotifications =
+    showAll
+      ? notifications
+      : notifications.slice(0, 8);
 
-  const highCount = notifications.filter(
-    (item) => item.priority === "high"
-  ).length;
+  const highCount =
+    notifications.filter(
+      (item) => item.priority === "high"
+    ).length;
+
+  const unreadCount =
+    notifications.filter(
+      (item) =>
+        !readNotifications.has(item.id)
+    ).length;
 
   const filteredAlertCount =
-    (preferences.leakAlerts ? data?.leaks.length ?? 0 : 0) +
+    (preferences.leakAlerts
+      ? data?.leaks.length ?? 0
+      : 0) +
     (preferences.taskReminders
       ? data?.summary.dueSoonTaskCount ?? 0
       : 0) +
@@ -234,6 +288,31 @@ export default function NotificationsPage() {
     (preferences.subscriptionAlerts
       ? data?.summary.subscriptions ?? 0
       : 0);
+
+  function toggleRead(id: string) {
+    setReadNotifications((current) => {
+      const next = new Set(current);
+
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+
+      return next;
+    });
+  }
+
+  function markAllAsRead() {
+    setReadNotifications(
+      new Set(
+        notifications.map(
+          (notification) =>
+            notification.id
+        )
+      )
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -258,11 +337,19 @@ export default function NotificationsPage() {
                   </p>
                 </div>
 
-                {highCount > 0 && (
-                  <span className="w-fit rounded-full bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700">
-                    {highCount} high priority
-                  </span>
-                )}
+                <div className="flex flex-wrap items-center gap-2">
+                  {unreadCount > 0 && (
+                    <span className="w-fit rounded-full bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700">
+                      {unreadCount} unread
+                    </span>
+                  )}
+
+                  {highCount > 0 && (
+                    <span className="w-fit rounded-full bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700">
+                      {highCount} high priority
+                    </span>
+                  )}
+                </div>
               </div>
             </header>
 
@@ -274,12 +361,14 @@ export default function NotificationsPage() {
 
             {!data && !error && (
               <div className="space-y-3">
-                {[1, 2, 3, 4].map((item) => (
-                  <div
-                    key={item}
-                    className="h-24 animate-pulse rounded-2xl bg-slate-200"
-                  />
-                ))}
+                {[1, 2, 3, 4].map(
+                  (item) => (
+                    <div
+                      key={item}
+                      className="h-24 animate-pulse rounded-2xl bg-slate-200"
+                    />
+                  )
+                )}
               </div>
             )}
 
@@ -308,22 +397,30 @@ export default function NotificationsPage() {
                   <div className="mt-4 flex flex-wrap gap-2">
                     <PreferenceBadge
                       label="Leak alerts"
-                      enabled={preferences.leakAlerts}
+                      enabled={
+                        preferences.leakAlerts
+                      }
                     />
 
                     <PreferenceBadge
                       label="Task reminders"
-                      enabled={preferences.taskReminders}
+                      enabled={
+                        preferences.taskReminders
+                      }
                     />
 
                     <PreferenceBadge
                       label="Email alerts"
-                      enabled={preferences.emailNotifications}
+                      enabled={
+                        preferences.emailNotifications
+                      }
                     />
 
                     <PreferenceBadge
                       label="Subscriptions"
-                      enabled={preferences.subscriptionAlerts}
+                      enabled={
+                        preferences.subscriptionAlerts
+                      }
                     />
                   </div>
                 </section>
@@ -355,34 +452,69 @@ export default function NotificationsPage() {
                 ) : (
                   <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
                     <div className="border-b border-slate-100 px-5 py-4">
-                      <div>
-                        <h2 className="font-semibold text-slate-950">
-                          Your notifications
-                        </h2>
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <h2 className="font-semibold text-slate-950">
+                            Your notifications
+                          </h2>
 
-                        <p className="mt-0.5 text-xs text-slate-500">
-                          {notifications.length} item
-                          {notifications.length === 1 ? "" : "s"} across
-                          TriGuard.
-                        </p>
+                          <p className="mt-0.5 text-xs text-slate-500">
+                            {notifications.length} item
+                            {notifications.length === 1
+                              ? ""
+                              : "s"} across TriGuard.
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={markAllAsRead}
+                          disabled={
+                            unreadCount === 0
+                          }
+                          className="w-fit rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          Mark all as read
+                        </button>
                       </div>
                     </div>
 
                     <div className="divide-y divide-slate-100">
-                      {visibleNotifications.map((notification) => (
-                        <NotificationRow
-                          key={notification.id}
-                          notification={notification}
-                        />
-                      ))}
+                      {visibleNotifications.map(
+                        (notification) => {
+                          const isRead =
+                            readNotifications.has(
+                              notification.id
+                            );
+
+                          return (
+                            <NotificationRow
+                              key={notification.id}
+                              notification={
+                                notification
+                              }
+                              isRead={isRead}
+                              onToggleRead={() =>
+                                toggleRead(
+                                  notification.id
+                                )
+                              }
+                            />
+                          );
+                        }
+                      )}
                     </div>
 
-                    {notifications.length > 8 && (
+                    {notifications.length >
+                      8 && (
                       <div className="border-t border-slate-100 px-5 py-4 text-center">
                         <button
                           type="button"
                           onClick={() =>
-                            setShowAll((current) => !current)
+                            setShowAll(
+                              (current) =>
+                                !current
+                            )
                           }
                           className="text-sm font-semibold text-blue-600 hover:text-blue-700"
                         >
@@ -427,8 +559,12 @@ function PreferenceBadge({
 
 function NotificationRow({
   notification,
+  isRead,
+  onToggleRead,
 }: {
   notification: NotificationItem;
+  isRead: boolean;
+  onToggleRead: () => void;
 }) {
   const icon =
     notification.type === "leak"
@@ -437,7 +573,8 @@ function NotificationRow({
         ? "✓"
         : notification.type === "email"
           ? "✉"
-          : notification.type === "subscription"
+          : notification.type ===
+              "subscription"
             ? "↻"
             : "•";
 
@@ -449,39 +586,110 @@ function NotificationRow({
         : "bg-slate-100 text-slate-600";
 
   return (
-    <Link
-      href={notification.href}
-      className="flex gap-4 px-5 py-5 transition hover:bg-slate-50"
+    <div
+      className={`flex gap-4 px-5 py-5 transition ${
+        isRead
+          ? "bg-white"
+          : "bg-blue-50/25"
+      }`}
     >
-      <div
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-semibold ${iconClass}`}
+      <Link
+        href={notification.href}
+        className="flex min-w-0 flex-1 gap-4"
       >
-        {icon}
+        <div
+          className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-semibold ${iconClass}`}
+        >
+          {icon}
+
+          {!isRead && (
+            <span
+              className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-blue-600 ring-2 ring-white"
+              aria-label="Unread"
+            />
+          )}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p
+              className={`font-semibold ${
+                isRead
+                  ? "text-slate-700"
+                  : "text-slate-900"
+              }`}
+            >
+              {notification.title}
+            </p>
+
+            <PriorityBadge
+              priority={
+                notification.priority
+              }
+            />
+          </div>
+
+          <p className="mt-1 text-sm leading-6 text-slate-500">
+            {notification.description}
+          </p>
+
+          <p className="mt-2 text-xs text-slate-400">
+            {new Date(
+              notification.timestamp
+            ).toLocaleString("en-NG", {
+              weekday: "short",
+              month: "short",
+              day: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+            })}
+          </p>
+        </div>
+
+        <span className="hidden items-center text-slate-300 sm:flex">
+          →
+        </span>
+      </Link>
+
+      <div className="flex shrink-0 items-start pt-1">
+        <button
+          type="button"
+          onClick={onToggleRead}
+          className="text-xs font-semibold text-blue-600 hover:text-blue-700"
+        >
+          {isRead
+            ? "Mark unread"
+            : "Mark read"}
+        </button>
       </div>
+    </div>
+  );
+}
 
-      <div className="min-w-0 flex-1">
-        <p className="font-semibold text-slate-900">
-          {notification.title}
-        </p>
+function PriorityBadge({
+  priority,
+}: {
+  priority: "high" | "medium" | "low";
+}) {
+  const classes =
+    priority === "high"
+      ? "bg-red-50 text-red-700"
+      : priority === "medium"
+        ? "bg-amber-50 text-amber-700"
+        : "bg-slate-100 text-slate-500";
 
-        <p className="mt-1 text-sm leading-6 text-slate-500">
-          {notification.description}
-        </p>
+  const label =
+    priority === "high"
+      ? "High"
+      : priority === "medium"
+        ? "Medium"
+        : "Info";
 
-        <p className="mt-2 text-xs text-slate-400">
-          {new Date(notification.timestamp).toLocaleString("en-NG", {
-            weekday: "short",
-            month: "short",
-            day: "numeric",
-            hour: "numeric",
-            minute: "2-digit",
-          })}
-        </p>
-      </div>
-
-      <span className="hidden items-center text-slate-300 sm:flex">
-        →
-      </span>
-    </Link>
+  return (
+    <span
+      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${classes}`}
+    >
+      {label}
+    </span>
   );
 }

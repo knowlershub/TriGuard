@@ -7,8 +7,10 @@ import Sidebar from "@/components/layout/Sidebar";
 import MobileNav from "@/components/layout/MobileNav";
 
 import {
+  getGmailConnectionStatus,
   getNotificationPreferences,
   updateNotificationPreferences,
+  type GmailConnectionStatus,
   type NotificationPreferences,
 } from "@/lib/dashboardApi";
 
@@ -20,9 +22,19 @@ const DEFAULT_PREFERENCES: NotificationPreferences = {
   dailyDigest: true,
 };
 
+const DEFAULT_GMAIL_STATUS: GmailConnectionStatus = {
+  connected: false,
+  emailAddress: null,
+  provider: null,
+  expired: false,
+  needsReauth: false,
+};
 export default function SettingsPage() {
   const [settings, setSettings] =
     useState<NotificationPreferences>(DEFAULT_PREFERENCES);
+
+  const [gmail, setGmail] =
+    useState<GmailConnectionStatus>(DEFAULT_GMAIL_STATUS);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -31,17 +43,24 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    const testUserId = process.env.NEXT_PUBLIC_TEST_USER_ID;
+    const testUserId =
+      process.env.NEXT_PUBLIC_TEST_USER_ID;
 
     if (!testUserId) {
-      setError("NEXT_PUBLIC_TEST_USER_ID is not configured.");
+      setError(
+        "NEXT_PUBLIC_TEST_USER_ID is not configured."
+      );
       setLoading(false);
       return;
     }
 
-    getNotificationPreferences(testUserId)
-      .then((preferences) => {
+    Promise.all([
+      getNotificationPreferences(testUserId),
+      getGmailConnectionStatus(testUserId),
+    ])
+      .then(([preferences, gmailStatus]) => {
         setSettings(preferences);
+        setGmail(gmailStatus);
       })
       .catch((err) => {
         setError(
@@ -68,10 +87,13 @@ export default function SettingsPage() {
   }
 
   async function saveSettings() {
-    const testUserId = process.env.NEXT_PUBLIC_TEST_USER_ID;
+    const testUserId =
+      process.env.NEXT_PUBLIC_TEST_USER_ID;
 
     if (!testUserId) {
-      setError("NEXT_PUBLIC_TEST_USER_ID is not configured.");
+      setError(
+        "NEXT_PUBLIC_TEST_USER_ID is not configured."
+      );
       return;
     }
 
@@ -80,10 +102,11 @@ export default function SettingsPage() {
     setSaved(false);
 
     try {
-      const updated = await updateNotificationPreferences(
-        testUserId,
-        settings
-      );
+      const updated =
+        await updateNotificationPreferences(
+          testUserId,
+          settings
+        );
 
       setSettings(updated);
       setSaved(true);
@@ -102,11 +125,17 @@ export default function SettingsPage() {
     }
   }
 
-  const testUserId = process.env.NEXT_PUBLIC_TEST_USER_ID;
+  const testUserId =
+    process.env.NEXT_PUBLIC_TEST_USER_ID;
 
   const gmailConnectUrl = testUserId
-    ? `/api/auth/gmail/start?userId=${encodeURIComponent(testUserId)}`
+    ? `/api/auth/gmail/start?userId=${encodeURIComponent(
+        testUserId
+      )}`
     : "#";
+
+  const gmailNeedsReconnect =
+    gmail.connected && gmail.expired;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -142,7 +171,7 @@ export default function SettingsPage() {
               </div>
             ) : (
               <div className="space-y-6">
-                {/* Notification settings */}
+                {/* Notifications */}
                 <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
                   <div className="border-b border-slate-100 px-6 py-5">
                     <h2 className="font-semibold text-slate-950">
@@ -160,7 +189,10 @@ export default function SettingsPage() {
                       description="Show important InboxZero email alerts."
                       checked={settings.emailNotifications}
                       onChange={(value) =>
-                        updateSetting("emailNotifications", value)
+                        updateSetting(
+                          "emailNotifications",
+                          value
+                        )
                       }
                     />
 
@@ -169,7 +201,10 @@ export default function SettingsPage() {
                       description="Notify me when category spending rises significantly."
                       checked={settings.leakAlerts}
                       onChange={(value) =>
-                        updateSetting("leakAlerts", value)
+                        updateSetting(
+                          "leakAlerts",
+                          value
+                        )
                       }
                     />
 
@@ -178,7 +213,10 @@ export default function SettingsPage() {
                       description="Show reminders for tasks approaching their deadlines."
                       checked={settings.taskReminders}
                       onChange={(value) =>
-                        updateSetting("taskReminders", value)
+                        updateSetting(
+                          "taskReminders",
+                          value
+                        )
                       }
                     />
 
@@ -187,7 +225,10 @@ export default function SettingsPage() {
                       description="Surface recurring-charge and subscription activity."
                       checked={settings.subscriptionAlerts}
                       onChange={(value) =>
-                        updateSetting("subscriptionAlerts", value)
+                        updateSetting(
+                          "subscriptionAlerts",
+                          value
+                        )
                       }
                     />
 
@@ -196,7 +237,10 @@ export default function SettingsPage() {
                       description="Prepare a daily TriGuard summary when digest support is connected."
                       checked={settings.dailyDigest}
                       onChange={(value) =>
-                        updateSetting("dailyDigest", value)
+                        updateSetting(
+                          "dailyDigest",
+                          value
+                        )
                       }
                     />
                   </div>
@@ -223,14 +267,35 @@ export default function SettingsPage() {
 
                     <ConnectionRow
                       name="Gmail"
-                      description="InboxZero email summaries and routing."
-                      status="Connect Gmail"
-                      href={gmailConnectUrl}
+                      description={
+                        gmail.connected &&
+                        gmail.emailAddress
+                          ? `Connected as ${gmail.emailAddress}.`
+                          : "InboxZero email summaries and routing."
+                      }
+                      status={
+                        gmailNeedsReconnect
+                          ? "Reconnect Gmail"
+                          : gmail.connected
+                            ? "Connected"
+                            : "Connect Gmail"
+                      }
+                      href={
+                        gmail.connected &&
+                        !gmailNeedsReconnect
+                          ? undefined
+                          : gmailConnectUrl
+                      }
+                      connected={
+                        gmail.connected &&
+                        !gmailNeedsReconnect
+                      }
+                      warning={gmailNeedsReconnect}
                     />
                   </div>
                 </section>
 
-                {/* Profile */}
+                {/* Account */}
                 <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                   <div>
                     <h2 className="font-semibold text-slate-950">
@@ -266,22 +331,11 @@ export default function SettingsPage() {
                     disabled={saving}
                     className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-wait disabled:opacity-50"
                   >
-                    {saving ? "Saving..." : "Save settings"}
+                    {saving
+                      ? "Saving..."
+                      : "Save settings"}
                   </button>
                 </div>
-
-                {/* Prototype note */}
-                <section className="rounded-2xl border border-blue-200 bg-blue-50 p-6">
-                  <p className="text-sm font-semibold text-blue-950">
-                    Connection status
-                  </p>
-
-                  <p className="mt-1 text-sm leading-6 text-blue-800">
-                    WhatsApp and Gmail are not marked as connected until their
-                    actual integrations are linked. Gmail can be connected
-                    from this page.
-                  </p>
-                </section>
               </div>
             )}
           </div>
@@ -307,7 +361,9 @@ function SettingToggle({
   return (
     <div className="flex items-start justify-between gap-6 px-6 py-5">
       <div className="min-w-0">
-        <p className="font-medium text-slate-900">{title}</p>
+        <p className="font-medium text-slate-900">
+          {title}
+        </p>
 
         <p className="mt-1 text-sm leading-6 text-slate-500">
           {description}
@@ -320,12 +376,16 @@ function SettingToggle({
         aria-checked={checked}
         onClick={() => onChange(!checked)}
         className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition ${
-          checked ? "bg-blue-600" : "bg-slate-300"
+          checked
+            ? "bg-blue-600"
+            : "bg-slate-300"
         }`}
       >
         <span
           className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition ${
-            checked ? "left-6" : "left-1"
+            checked
+              ? "left-6"
+              : "left-1"
           }`}
         />
       </button>
@@ -338,18 +398,22 @@ function ConnectionRow({
   description,
   status,
   href,
+  connected = false,
+  warning = false,
 }: {
   name: string;
   description: string;
   status: string;
   href?: string;
+  connected?: boolean;
+  warning?: boolean;
 }) {
-  const connected = status === "Connected";
-
   const content = (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <p className="font-medium text-slate-900">{name}</p>
+      <div className="min-w-0">
+        <p className="font-medium text-slate-900">
+          {name}
+        </p>
 
         <p className="mt-1 text-sm leading-6 text-slate-500">
           {description}
@@ -357,10 +421,12 @@ function ConnectionRow({
       </div>
 
       <span
-        className={`w-fit rounded-full px-3 py-1.5 text-xs font-semibold ${
+        className={`w-fit shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold ${
           connected
             ? "bg-emerald-50 text-emerald-700"
-            : "bg-slate-100 text-slate-600"
+            : warning
+              ? "bg-amber-50 text-amber-700"
+              : "bg-slate-100 text-slate-600"
         }`}
       >
         {status}
@@ -368,14 +434,16 @@ function ConnectionRow({
     </div>
   );
 
-  return href && href !== "#" ? (
-    <Link
-      href={href}
-      className="block px-6 py-5 transition hover:bg-slate-50"
-    >
-      {content}
-    </Link>
-  ) : (
-    <div className="px-6 py-5">{content}</div>
-  );
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="block px-6 py-5 transition hover:bg-slate-50"
+      >
+        {content}
+      </Link>
+    );
+  }
+
+  return <div className="px-6 py-5">{content}</div>;
 }
