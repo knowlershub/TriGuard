@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { signOut } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -39,6 +40,7 @@ export default function Sidebar() {
 
   const [gmailConnected, setGmailConnected] =
     useState(false);
+
   const [gmailEmail, setGmailEmail] =
     useState<string | null>(null);
 
@@ -53,15 +55,26 @@ export default function Sidebar() {
     getGmailConnectionStatus(testUserId)
       .then((status) => {
         setGmailConnected(
-          status.connected && !status.expired
+          status.connected &&
+            !status.expired &&
+            !status.needsReauth
         );
-        setGmailEmail(status.emailAddress);
+
+        setGmailEmail(
+          status.emailAddress
+        );
       })
       .catch(() => {
         setGmailConnected(false);
         setGmailEmail(null);
       });
   }, []);
+
+  async function handleLogout() {
+    await signOut({
+      callbackUrl: "/login",
+    });
+  }
 
   return (
     <aside className="hidden min-h-screen w-64 shrink-0 flex-col bg-slate-950 text-white lg:flex">
@@ -118,50 +131,18 @@ export default function Sidebar() {
           })}
         </nav>
 
-<div className="mb-3 mt-8 px-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
-  Connections
-</div>
+        <div className="mb-3 mt-8 px-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+          Connections
+        </div>
 
-<div className="space-y-3 px-3">
-  <div className="flex items-center justify-between text-sm">
-    <div>
-      <p className="text-slate-300">
-        Gmail
-      </p>
-
-      <p className="text-xs text-slate-500">
-        Connected
-      </p>
-    </div>
-
-    <span
-      className="h-2 w-2 rounded-full bg-emerald-400"
-      aria-label="Gmail connected"
-    />
-  </div>
-
-  <div className="flex items-center justify-between text-sm">
-    <div>
-      <p className="text-slate-300">
-        WhatsApp
-      </p>
-
-      <p className="text-xs text-slate-500">
-        Coming soon
-      </p>
-    </div>
-
-    <span
-      className="h-2 w-2 rounded-full bg-slate-600"
-      aria-label="WhatsApp coming soon"
-    />
-  </div>
-</div>
         <div className="space-y-3 px-3">
-          <ConnectionStatus
-            label="WhatsApp"
-            connected={false}
-          />
+          <div>
+            <ConnectionStatus
+              label="WhatsApp"
+              connected={false}
+              statusText="Coming soon"
+            />
+          </div>
 
           <div>
             <ConnectionStatus
@@ -169,14 +150,15 @@ export default function Sidebar() {
               connected={gmailConnected}
             />
 
-            {gmailConnected && gmailEmail && (
-              <p
-                className="mt-1 truncate text-[10px] text-slate-500"
-                title={gmailEmail}
-              >
-                {gmailEmail}
-              </p>
-            )}
+            {gmailConnected &&
+              gmailEmail && (
+                <p
+                  className="mt-1 truncate pl-1 text-[10px] text-slate-500"
+                  title={gmailEmail}
+                >
+                  {gmailEmail}
+                </p>
+              )}
           </div>
         </div>
       </div>
@@ -189,7 +171,9 @@ export default function Sidebar() {
         <Link
           href="/dashboard/profile"
           className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition ${
-            pathname.startsWith("/dashboard/profile")
+            pathname.startsWith(
+              "/dashboard/profile"
+            )
               ? "bg-blue-600 text-white"
               : "text-slate-300 hover:bg-white/5 hover:text-white"
           }`}
@@ -204,7 +188,9 @@ export default function Sidebar() {
         <Link
           href="/dashboard/settings"
           className={`mt-1 flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition ${
-            pathname.startsWith("/dashboard/settings")
+            pathname.startsWith(
+              "/dashboard/settings"
+            )
               ? "bg-blue-600 text-white"
               : "text-slate-300 hover:bg-white/5 hover:text-white"
           }`}
@@ -215,6 +201,18 @@ export default function Sidebar() {
 
           Settings
         </Link>
+
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium text-slate-300 transition hover:bg-red-500/10 hover:text-red-300"
+        >
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10">
+            ↪
+          </span>
+
+          Log out
+        </button>
       </div>
     </aside>
   );
@@ -223,10 +221,18 @@ export default function Sidebar() {
 function ConnectionStatus({
   label,
   connected,
+  statusText,
 }: {
   label: string;
   connected: boolean;
+  statusText?: string;
 }) {
+  const displayText =
+    statusText ??
+    (connected
+      ? "Connected"
+      : "Not connected");
+
   return (
     <div className="flex items-center justify-between gap-3 text-sm">
       <span className="text-slate-300">
@@ -235,10 +241,10 @@ function ConnectionStatus({
 
       <div className="flex items-center gap-2">
         <span
-          className={`h-2 w-2 rounded-full ${
+          className={`h-2 w-2 ${
             connected
-              ? "bg-emerald-400"
-              : "bg-slate-600"
+              ? "rounded-full bg-emerald-400"
+              : "rounded-full bg-slate-600"
           }`}
         />
 
@@ -249,9 +255,7 @@ function ConnectionStatus({
               : "text-slate-500"
           }`}
         >
-          {connected
-            ? "Connected"
-            : "Not connected"}
+          {displayText}
         </span>
       </div>
     </div>
