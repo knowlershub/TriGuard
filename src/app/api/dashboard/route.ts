@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getOrCreateUser } from "@/lib/users";
 import { resolveApiUser } from "@/lib/apiAuth";
 export const dynamic = "force-dynamic";
 
@@ -67,35 +66,21 @@ export async function GET(req: NextRequest) {
      * This lets us introduce real accounts without
      * breaking the existing test/Claude workflow.
      */
-    const authenticated =
-      await resolveAuthenticatedUser();
+    const testUserId = req.nextUrl.searchParams.get("testUserId");
+    const resolved = await resolveApiUser(testUserId);
 
-    let user;
-
-    if (authenticated.status === 200) {
-      user = authenticated.user;
-    } else {
-      const testUserId =
-        req.nextUrl.searchParams.get(
-          "testUserId"
-        );
-
-      if (!testUserId) {
-        return NextResponse.json(
-          {
-            error: authenticated.error,
-          },
-          {
-            status: authenticated.status,
-          }
-        );
-      }
-
-      user = await getOrCreateUser(
-        "test",
-        testUserId
+    if (resolved.status !== 200) {
+      return NextResponse.json(
+        {
+          error: resolved.error,
+        },
+        {
+          status: resolved.status,
+        }
       );
     }
+
+    const user = resolved.user;
 
     const now = new Date();
 
@@ -418,8 +403,8 @@ export async function GET(req: NextRequest) {
             (task) =>
               task.dueAt !== null &&
               task.dueAt >= dayStart &&
-              task.dueAt <
-                nextDayStart
+              task.dueAt 
+                <nextDayStart
           ).length,
         emailProcessedToday:
           todayEmails.length,

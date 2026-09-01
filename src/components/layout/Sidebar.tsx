@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -38,6 +38,10 @@ const navigation = [
 export default function Sidebar() {
   const pathname = usePathname();
 
+  const {
+    status: sessionStatus,
+  } = useSession();
+
   const [gmailConnected, setGmailConnected] =
     useState(false);
 
@@ -45,14 +49,13 @@ export default function Sidebar() {
     useState<string | null>(null);
 
   useEffect(() => {
-    const testUserId =
-      process.env.NEXT_PUBLIC_TEST_USER_ID;
-
-    if (!testUserId) {
+    if (sessionStatus !== "authenticated") {
+      setGmailConnected(false);
+      setGmailEmail(null);
       return;
     }
 
-    getGmailConnectionStatus(testUserId)
+    getGmailConnectionStatus()
       .then((status) => {
         setGmailConnected(
           status.connected &&
@@ -68,7 +71,7 @@ export default function Sidebar() {
         setGmailConnected(false);
         setGmailEmail(null);
       });
-  }, []);
+  }, [sessionStatus]);
 
   async function handleLogout() {
     await signOut({
@@ -136,13 +139,11 @@ export default function Sidebar() {
         </div>
 
         <div className="space-y-3 px-3">
-          <div>
-            <ConnectionStatus
-              label="WhatsApp"
-              connected={false}
-              statusText="Coming soon"
-            />
-          </div>
+          <ConnectionStatus
+            label="WhatsApp"
+            connected={false}
+            statusText="Coming soon"
+          />
 
           <div>
             <ConnectionStatus
@@ -241,10 +242,10 @@ function ConnectionStatus({
 
       <div className="flex items-center gap-2">
         <span
-          className={`h-2 w-2 ${
+          className={`h-2 w-2 rounded-full ${
             connected
-              ? "rounded-full bg-emerald-400"
-              : "rounded-full bg-slate-600"
+              ? "bg-emerald-400"
+              : "bg-slate-600"
           }`}
         />
 

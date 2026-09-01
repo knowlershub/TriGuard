@@ -1,15 +1,9 @@
 import { prisma } from "@/lib/prisma";
-import { downloadWhatsAppMedia } from "@/lib/whatsappMedia";
 import { extractTextFromImage } from "@/lib/ocr/tesseractOcr";
 import { parseReceiptText } from "@/lib/parsers/receiptParser";
 import { checkLeakAlert } from "@/lib/leakAlert";
 
-export async function handleReceiptImage(userId: string, mediaId: string): Promise<string> {
-  const imageBuffer = await downloadWhatsAppMedia(mediaId);
-  if (!imageBuffer) {
-    return "Couldn't download that image — try sending it again.";
-  }
-
+export async function handleReceiptImage(userId: string, imageBuffer: Buffer): Promise<string> {
   const rawText = await extractTextFromImage(imageBuffer);
   if (!rawText) {
     return "Couldn't read any text from that receipt. Try a clearer photo, or log it manually with /expense 500 data.";
@@ -29,7 +23,7 @@ export async function handleReceiptImage(userId: string, mediaId: string): Promi
       category: merchant,
       source: "receipt_ocr",
       rawInput: rawText,
-      parsedBy: "ocr:google_vision",
+      parsedBy: "ocr:tesseract",
     },
   });
 

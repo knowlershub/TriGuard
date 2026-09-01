@@ -31,16 +31,6 @@ export async function resolveAuthenticatedUser() {
   } as const;
 }
 
-/**
- * Production:
- *   authenticated session is required.
- *
- * Development:
- *   an optional testUserId may be used as a fallback.
- *
- * This lets the existing Claude/test workflow continue locally
- * without allowing arbitrary test-user access in production.
- */
 export async function resolveApiUser(
   testUserId?: string | null
 ) {
@@ -54,10 +44,7 @@ export async function resolveApiUser(
   const isDevelopment =
     process.env.NODE_ENV !== "production";
 
-  if (
-    isDevelopment &&
-    testUserId
-  ) {
+  if (isDevelopment && testUserId) {
     const user =
       await getOrCreateUser(
         "test",
@@ -74,7 +61,7 @@ export async function resolveApiUser(
 }
 
 /**
- * Legacy helper retained for existing callers.
+ * Legacy resolver retained for existing development callers.
  */
 export async function resolveUserId(
   userId: string | null

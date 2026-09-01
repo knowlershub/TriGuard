@@ -80,7 +80,7 @@ export type NotificationPreferences = {
 };
 
 export type SaveReceiptExpenseInput = {
-  testUserId: string;
+  testUserId?: string;
   merchant: string;
   amount: number;
   currency: string;
@@ -100,9 +100,12 @@ export type GmailConnectionStatus = {
 /*
  * Frontend request deduplication.
  *
- * Multiple dashboard components can mount at nearly the same time.
- * These caches prevent Sidebar, InboxZero, Settings, etc. from
- * hammering the database through duplicate requests.
+ * These short-lived caches prevent multiple dashboard components
+ * from making duplicate requests when they mount together.
+ *
+ * The cache key is based on the optional testUserId used only
+ * by the development fallback. Authenticated production requests
+ * use an empty key and rely on the server session.
  */
 
 let dashboardDataPromise: Promise<DashboardData> | null = null;
@@ -115,8 +118,9 @@ let dashboardDataCache:
     }
   | null = null;
 
-let gmailStatusPromise: Promise<GmailConnectionStatus> | null =
-  null;
+let gmailStatusPromise:
+  | Promise<GmailConnectionStatus>
+  | null = null;
 
 let gmailStatusCache:
   | {
@@ -126,14 +130,24 @@ let gmailStatusCache:
     }
   | null = null;
 
+function buildQuery(testUserId?: string) {
+  return testUserId
+    ? `?testUserId=${encodeURIComponent(
+        testUserId
+      )}`
+    : "";
+}
+
 export async function getDashboardData(
-  testUserId: string
+  testUserId?: string
 ): Promise<DashboardData> {
+  const cacheKey = testUserId ?? "";
   const now = Date.now();
 
   if (
     dashboardDataCache &&
-    dashboardDataCache.testUserId === testUserId &&
+    dashboardDataCache.testUserId ===
+      cacheKey &&
     dashboardDataCache.expiresAt > now
   ) {
     return dashboardDataCache.data;
@@ -143,76 +157,102 @@ export async function getDashboardData(
     return dashboardDataPromise;
   }
 
-  dashboardDataPromise = (async () => {
-    try {
-      const response = await fetch(
-        `/api/dashboard?testUserId=${encodeURIComponent(
-          testUserId
-        )}`,
-        {
-          cache: "no-store",
+  dashboardDataPromise =
+    (async () => {
+      try {
+        const response =
+          await fetch(
+            `/api/dashboard${buildQuery(
+              testUserId
+            )}`,
+            {
+              cache: "no-store",
+            }
+          );
+
+        const contentType =
+          response.headers.get(
+            "content-type"
+          ) ?? "";
+
+        if (
+          !contentType.includes(
+            "application/json"
+          )
+        ) {
+          const text =
+            await response.text();
+
+          throw new Error(
+            `Dashboard API returned ${response.status} ${response.statusText}. Response starts with: ${text.slice(
+              0,
+              120
+            )}`
+          );
         }
-      );
 
-      const contentType =
-        response.headers.get("content-type") ?? "";
+        const data =
+          await response.json();
 
-      if (!contentType.includes("application/json")) {
-        const text = await response.text();
+        if (!response.ok) {
+          throw new Error(
+            data?.error ||
+              "Failed to load dashboard"
+          );
+        }
 
-        throw new Error(
-          `Dashboard API returned ${response.status} ${response.statusText}. Response starts with: ${text.slice(
-            0,
-            120
-          )}`
-        );
+        const result =
+          data as DashboardData;
+
+        dashboardDataCache = {
+          testUserId: cacheKey,
+          data: result,
+          expiresAt:
+            Date.now() + 5_000,
+        };
+
+        return result;
+      } finally {
+        dashboardDataPromise = null;
       }
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data?.error || "Failed to load dashboard"
-        );
-      }
-
-      const result = data as DashboardData;
-
-      dashboardDataCache = {
-        testUserId,
-        data: result,
-        expiresAt: Date.now() + 5_000,
-      };
-
-      return result;
-    } finally {
-      dashboardDataPromise = null;
-    }
-  })();
+    })();
 
   return dashboardDataPromise;
 }
 
 export async function sendCommand(
-  testUserId: string,
+  testUserId: string | undefined,
   text: string
 ): Promise<{ reply: string }> {
-  const response = await fetch("/api/command", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      testUserId,
-      text,
-    }),
-  });
+  const response = await fetch(
+    "/api/command",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type":
+          "application/json",
+      },
+      body: JSON.stringify({
+        ...(testUserId
+          ? { testUserId }
+          : {}),
+        text,
+      }),
+    }
+  );
 
   const contentType =
-    response.headers.get("content-type") ?? "";
+    response.headers.get(
+      "content-type"
+    ) ?? "";
 
-  if (!contentType.includes("application/json")) {
-    const responseText = await response.text();
+  if (
+    !contentType.includes(
+      "application/json"
+    )
+  ) {
+    const responseText =
+      await response.text();
 
     throw new Error(
       `Command API returned ${response.status} ${response.statusText}. Response starts with: ${responseText.slice(
@@ -222,18 +262,16 @@ export async function sendCommand(
     );
   }
 
-  const data = await response.json();
+  const data =
+    await response.json();
 
   if (!response.ok) {
     throw new Error(
-      data?.error || "Command failed"
+      data?.error ||
+        "Command failed"
     );
   }
 
-  /*
-   * A command can change dashboard data, so clear the short-lived
-   * dashboard cache after a successful command.
-   */
   dashboardDataCache = null;
 
   return data;
@@ -247,17 +285,25 @@ export async function saveReceiptExpense(
     {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type":
+          "application/json",
       },
       body: JSON.stringify(input),
     }
   );
 
   const contentType =
-    response.headers.get("content-type") ?? "";
+    response.headers.get(
+      "content-type"
+    ) ?? "";
 
-  if (!contentType.includes("application/json")) {
-    const responseText = await response.text();
+  if (
+    !contentType.includes(
+      "application/json"
+    )
+  ) {
+    const responseText =
+      await response.text();
 
     throw new Error(
       `Receipt API returned ${response.status} ${response.statusText}. Response starts with: ${responseText.slice(
@@ -267,7 +313,8 @@ export async function saveReceiptExpense(
     );
   }
 
-  const data = await response.json();
+  const data =
+    await response.json();
 
   if (!response.ok) {
     throw new Error(
@@ -282,7 +329,7 @@ export async function saveReceiptExpense(
 }
 
 export async function updateProfile(
-  testUserId: string,
+  testUserId: string | undefined,
   displayName: string
 ): Promise<{
   success: boolean;
@@ -291,22 +338,35 @@ export async function updateProfile(
     displayName: string | null;
   };
 }> {
-  const response = await fetch("/api/profile", {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      testUserId,
-      displayName,
-    }),
-  });
+  const response = await fetch(
+    "/api/profile",
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type":
+          "application/json",
+      },
+      body: JSON.stringify({
+        ...(testUserId
+          ? { testUserId }
+          : {}),
+        displayName,
+      }),
+    }
+  );
 
   const contentType =
-    response.headers.get("content-type") ?? "";
+    response.headers.get(
+      "content-type"
+    ) ?? "";
 
-  if (!contentType.includes("application/json")) {
-    const responseText = await response.text();
+  if (
+    !contentType.includes(
+      "application/json"
+    )
+  ) {
+    const responseText =
+      await response.text();
 
     throw new Error(
       `Profile API returned ${response.status} ${response.statusText}. Response starts with: ${responseText.slice(
@@ -316,28 +376,26 @@ export async function updateProfile(
     );
   }
 
-  const data = await response.json();
+  const data =
+    await response.json();
 
   if (!response.ok) {
     throw new Error(
-      data?.error || "Failed to update profile."
+      data?.error ||
+        "Failed to update profile."
     );
   }
 
-  /*
-   * Profile changes affect the dashboard greeting.
-   * Clear the dashboard cache so the next read gets fresh data.
-   */
   dashboardDataCache = null;
 
   return data;
 }
 
 export async function getNotificationPreferences(
-  testUserId: string
+  testUserId?: string
 ): Promise<NotificationPreferences> {
   const response = await fetch(
-    `/api/settings/notifications?testUserId=${encodeURIComponent(
+    `/api/settings/notifications${buildQuery(
       testUserId
     )}`,
     {
@@ -346,10 +404,17 @@ export async function getNotificationPreferences(
   );
 
   const contentType =
-    response.headers.get("content-type") ?? "";
+    response.headers.get(
+      "content-type"
+    ) ?? "";
 
-  if (!contentType.includes("application/json")) {
-    const text = await response.text();
+  if (
+    !contentType.includes(
+      "application/json"
+    )
+  ) {
+    const text =
+      await response.text();
 
     throw new Error(
       `Notification API returned ${response.status} ${response.statusText}, not JSON. Response starts with: ${text.slice(
@@ -359,7 +424,8 @@ export async function getNotificationPreferences(
     );
   }
 
-  const data = await response.json();
+  const data =
+    await response.json();
 
   if (!response.ok) {
     throw new Error(
@@ -372,7 +438,7 @@ export async function getNotificationPreferences(
 }
 
 export async function updateNotificationPreferences(
-  testUserId: string,
+  testUserId: string | undefined,
   preferences: NotificationPreferences
 ): Promise<NotificationPreferences> {
   const response = await fetch(
@@ -380,20 +446,30 @@ export async function updateNotificationPreferences(
     {
       method: "PATCH",
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type":
+          "application/json",
       },
       body: JSON.stringify({
-        testUserId,
+        ...(testUserId
+          ? { testUserId }
+          : {}),
         ...preferences,
       }),
     }
   );
 
   const contentType =
-    response.headers.get("content-type") ?? "";
+    response.headers.get(
+      "content-type"
+    ) ?? "";
 
-  if (!contentType.includes("application/json")) {
-    const text = await response.text();
+  if (
+    !contentType.includes(
+      "application/json"
+    )
+  ) {
+    const text =
+      await response.text();
 
     throw new Error(
       `Notification API returned ${response.status} ${response.statusText}, not JSON. Response starts with: ${text.slice(
@@ -403,7 +479,8 @@ export async function updateNotificationPreferences(
     );
   }
 
-  const data = await response.json();
+  const data =
+    await response.json();
 
   if (!response.ok) {
     throw new Error(
@@ -416,13 +493,15 @@ export async function updateNotificationPreferences(
 }
 
 export async function getGmailConnectionStatus(
-  testUserId: string
+  testUserId?: string
 ): Promise<GmailConnectionStatus> {
+  const cacheKey = testUserId ?? "";
   const now = Date.now();
 
   if (
     gmailStatusCache &&
-    gmailStatusCache.testUserId === testUserId &&
+    gmailStatusCache.testUserId ===
+      cacheKey &&
     gmailStatusCache.expiresAt > now
   ) {
     return gmailStatusCache.data;
@@ -432,54 +511,65 @@ export async function getGmailConnectionStatus(
     return gmailStatusPromise;
   }
 
-  gmailStatusPromise = (async () => {
-    try {
-      const response = await fetch(
-        `/api/settings/connections/gmail?testUserId=${encodeURIComponent(
-          testUserId
-        )}`,
-        {
-          cache: "no-store",
+  gmailStatusPromise =
+    (async () => {
+      try {
+        const response =
+          await fetch(
+            `/api/settings/connections/gmail${buildQuery(
+              testUserId
+            )}`,
+            {
+              cache: "no-store",
+            }
+          );
+
+        const contentType =
+          response.headers.get(
+            "content-type"
+          ) ?? "";
+
+        if (
+          !contentType.includes(
+            "application/json"
+          )
+        ) {
+          const text =
+            await response.text();
+
+          throw new Error(
+            `Gmail status API returned ${response.status} ${response.statusText}. Response starts with: ${text.slice(
+              0,
+              120
+            )}`
+          );
         }
-      );
 
-      const contentType =
-        response.headers.get("content-type") ?? "";
+        const data =
+          await response.json();
 
-      if (!contentType.includes("application/json")) {
-        const text = await response.text();
+        if (!response.ok) {
+          throw new Error(
+            data?.error ||
+              "Failed to check Gmail connection."
+          );
+        }
 
-        throw new Error(
-          `Gmail status API returned ${response.status} ${response.statusText}. Response starts with: ${text.slice(
-            0,
-            120
-          )}`
-        );
+        const result =
+          data as GmailConnectionStatus;
+
+        gmailStatusCache = {
+          testUserId: cacheKey,
+          data: result,
+          expiresAt:
+            Date.now() + 10_000,
+        };
+
+        return result;
+      } finally {
+        gmailStatusPromise = null;
       }
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data?.error ||
-            "Failed to check Gmail connection."
-        );
-      }
-
-      const result =
-        data as GmailConnectionStatus;
-
-      gmailStatusCache = {
-        testUserId,
-        data: result,
-        expiresAt: Date.now() + 10_000,
-      };
-
-      return result;
-    } finally {
-      gmailStatusPromise = null;
-    }
-  })();
+    })();
 
   return gmailStatusPromise;
 }

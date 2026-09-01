@@ -3,6 +3,7 @@ import { getOrCreateUser } from "@/lib/users";
 import { parseCommand, routeCommand } from "@/lib/commandRouter";
 import { handleForwardedSms } from "@/lib/handlers/smsForward";
 import { handleReceiptImage } from "@/lib/handlers/receiptOcr";
+import { downloadWhatsAppMedia } from "@/lib/whatsappMedia";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 
 /**
@@ -17,11 +18,9 @@ export async function GET(req: NextRequest) {
   const mode = params.get("hub.mode");
   const token = params.get("hub.verify_token");
   const challenge = params.get("hub.challenge");
-
   if (mode === "subscribe" && token === process.env.WHATSAPP_VERIFY_TOKEN) {
     return new NextResponse(challenge, { status: 200 });
   }
-
   return new NextResponse("Forbidden", { status: 403 });
 }
 
@@ -30,9 +29,9 @@ export async function GET(req: NextRequest) {
  *
  * Important: WhatsApp's webhook payload also includes things that aren't
  * user messages (delivery receipts, read receipts, status updates). We only
- * act on `messages` and only on type === "text" for now — everything else
- * (images, voice notes) is future work (OCR/Whisper), not something to
- * silently mis-route as an unknown command today.
+ * act on `messages` — text goes through command routing / SMS forwarding,
+ * images go through the OCR pipeline, everything else gets a friendly
+ * "not supported yet" reply.
  *
  * We always return 200 quickly, even on errors — WhatsApp interprets
  * non-200 as "retry this delivery," and a bug in our handler shouldn't
@@ -40,29 +39,29 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
-
   try {
     const entry = body?.entry?.[0];
     const change = entry?.changes?.[0]?.value;
     const message = change?.messages?.[0];
-
     if (!message) {
       // Status update / read receipt / etc — nothing to do.
       return NextResponse.json({ status: "ignored" });
     }
-
     const from: string = message.from; // sender's WhatsApp ID (phone number, no "+")
 
-if (message.type === "image") {
+    if (message.type === "image") {
       const user = await getOrCreateUser("whatsapp", from);
       const mediaId = message.image?.id;
-
       if (!mediaId) {
         await sendWhatsAppMessage(from, "Couldn't read that image — try sending it again.");
         return NextResponse.json({ status: "missing_media_id" });
       }
-
-      const reply = await handleReceiptImage(user.id, mediaId);
+      const imageBuffer = await downloadWhatsAppMedia(mediaId);
+      if (!imageBuffer) {
+        await sendWhatsAppMessage(from, "Couldn't download that image — try sending it again.");
+        return NextResponse.json({ status: "download_failed" });
+      }
+      const reply = await handleReceiptImage(user.id, imageBuffer);
       await sendWhatsAppMessage(from, reply);
       return NextResponse.json({ status: "ok" });
     }
@@ -74,14 +73,13 @@ if (message.type === "image") {
       );
       return NextResponse.json({ status: "unsupported_type" });
     }
+
     const text: string = message.text?.body ?? "";
     const user = await getOrCreateUser("whatsapp", from);
     const parsed = parseCommand(text);
-
     const reply = parsed
       ? await routeCommand(user.id, parsed)
       : await handleForwardedSms(user.id, text);
-
     await sendWhatsAppMessage(from, reply);
     return NextResponse.json({ status: "ok" });
   } catch (err) {
