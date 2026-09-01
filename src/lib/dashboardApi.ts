@@ -97,6 +97,106 @@ export type GmailConnectionStatus = {
   needsReauth: boolean;
 };
 
+export type TelegramConnectionStatus = {
+  connected: boolean;
+  telegramId?: string | null;
+};
+
+export type TelegramLinkResponse = {
+  connected: boolean;
+  code?: string;
+  expiresAt?: string;
+  url: string | null;
+};
+
+export async function createTelegramLink(
+  testUserId?: string
+): Promise<TelegramLinkResponse> {
+  const response = await fetch(
+    "/api/settings/connections/telegram",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ...(testUserId
+          ? { testUserId }
+          : {}),
+      }),
+      cache: "no-store",
+    }
+  );
+
+  const contentType =
+    response.headers.get("content-type") ?? "";
+
+  if (!contentType.includes("application/json")) {
+    const text = await response.text();
+
+    throw new Error(
+      `Telegram link API returned ${response.status} ${response.statusText}. Response starts with: ${text.slice(
+        0,
+        120
+      )}`
+    );
+  }
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data?.error ||
+        "Failed to generate Telegram connection link."
+    );
+  }
+
+  return data as TelegramLinkResponse;
+}
+
+export async function getTelegramConnectionStatus(
+  testUserId?: string
+): Promise<TelegramConnectionStatus> {
+  const response = await fetch(
+    `/api/settings/connections/telegram${buildQuery(
+      testUserId
+    )}`,
+    {
+      cache: "no-store",
+    }
+  );
+
+  const contentType =
+    response.headers.get("content-type") ?? "";
+
+  if (
+    !contentType.includes(
+      "application/json"
+    )
+  ) {
+    const text =
+      await response.text();
+
+    throw new Error(
+      `Telegram status API returned ${response.status} ${response.statusText}. Response starts with: ${text.slice(
+        0,
+        120
+      )}`
+    );
+  }
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data?.error ||
+        "Failed to check Telegram connection."
+    );
+  }
+
+  return data as TelegramConnectionStatus;
+}
+
 /*
  * Frontend request deduplication.
  *

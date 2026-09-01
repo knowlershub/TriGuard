@@ -7,11 +7,14 @@ import Sidebar from "@/components/layout/Sidebar";
 import MobileNav from "@/components/layout/MobileNav";
 
 import {
+  createTelegramLink,
   getGmailConnectionStatus,
   getNotificationPreferences,
+  getTelegramConnectionStatus,
   updateNotificationPreferences,
   type GmailConnectionStatus,
   type NotificationPreferences,
+  type TelegramConnectionStatus,
 } from "@/lib/dashboardApi";
 
 const DEFAULT_PREFERENCES: NotificationPreferences = {
@@ -29,6 +32,12 @@ const DEFAULT_GMAIL_STATUS: GmailConnectionStatus = {
   expired: false,
   needsReauth: false,
 };
+
+const DEFAULT_TELEGRAM_STATUS: TelegramConnectionStatus = {
+  connected: false,
+  telegramId: null,
+};
+
 export default function SettingsPage() {
   const [settings, setSettings] =
     useState<NotificationPreferences>(DEFAULT_PREFERENCES);
@@ -36,8 +45,12 @@ export default function SettingsPage() {
   const [gmail, setGmail] =
     useState<GmailConnectionStatus>(DEFAULT_GMAIL_STATUS);
 
+  const [telegram, setTelegram] =
+    useState<TelegramConnectionStatus>(DEFAULT_TELEGRAM_STATUS);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [telegramLinkLoading, setTelegramLinkLoading] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -57,11 +70,19 @@ export default function SettingsPage() {
     Promise.all([
       getNotificationPreferences(testUserId),
       getGmailConnectionStatus(testUserId),
+      getTelegramConnectionStatus(testUserId),
     ])
-      .then(([preferences, gmailStatus]) => {
-        setSettings(preferences);
-        setGmail(gmailStatus);
-      })
+      .then(
+        ([
+          preferences,
+          gmailStatus,
+          telegramStatus,
+        ]) => {
+          setSettings(preferences);
+          setGmail(gmailStatus);
+          setTelegram(telegramStatus);
+        }
+      )
       .catch((err) => {
         setError(
           err instanceof Error
@@ -125,6 +146,46 @@ export default function SettingsPage() {
     }
   }
 
+  async function connectTelegram() {
+    const testUserId =
+      process.env.NEXT_PUBLIC_TEST_USER_ID;
+
+    if (!testUserId) {
+      setError(
+        "NEXT_PUBLIC_TEST_USER_ID is not configured."
+      );
+      return;
+    }
+
+    setTelegramLinkLoading(true);
+    setError(null);
+
+    try {
+      const result =
+        await createTelegramLink(testUserId);
+
+      if (!result.url) {
+        throw new Error(
+          "Telegram did not return a connection link."
+        );
+      }
+
+      window.open(
+        result.url,
+        "_blank",
+        "noopener,noreferrer"
+      );
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to connect Telegram."
+      );
+    } finally {
+      setTelegramLinkLoading(false);
+    }
+  }
+
   const testUserId =
     process.env.NEXT_PUBLIC_TEST_USER_ID;
 
@@ -171,7 +232,6 @@ export default function SettingsPage() {
               </div>
             ) : (
               <div className="space-y-6">
-                {/* Notifications */}
                 <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
                   <div className="border-b border-slate-100 px-6 py-5">
                     <h2 className="font-semibold text-slate-950">
@@ -188,7 +248,7 @@ export default function SettingsPage() {
                       title="Email notifications"
                       description="Show important InboxZero email alerts."
                       checked={settings.emailNotifications}
-                      onChange={(value) =>
+                      onChange={(value: boolean) =>
                         updateSetting(
                           "emailNotifications",
                           value
@@ -200,7 +260,7 @@ export default function SettingsPage() {
                       title="Spending leak alerts"
                       description="Notify me when category spending rises significantly."
                       checked={settings.leakAlerts}
-                      onChange={(value) =>
+                      onChange={(value: boolean) =>
                         updateSetting(
                           "leakAlerts",
                           value
@@ -212,7 +272,7 @@ export default function SettingsPage() {
                       title="Task reminders"
                       description="Show reminders for tasks approaching their deadlines."
                       checked={settings.taskReminders}
-                      onChange={(value) =>
+                      onChange={(value: boolean) =>
                         updateSetting(
                           "taskReminders",
                           value
@@ -224,7 +284,7 @@ export default function SettingsPage() {
                       title="Subscription alerts"
                       description="Surface recurring-charge and subscription activity."
                       checked={settings.subscriptionAlerts}
-                      onChange={(value) =>
+                      onChange={(value: boolean) =>
                         updateSetting(
                           "subscriptionAlerts",
                           value
@@ -236,7 +296,7 @@ export default function SettingsPage() {
                       title="Daily digest"
                       description="Prepare a daily TriGuard summary when digest support is connected."
                       checked={settings.dailyDigest}
-                      onChange={(value) =>
+                      onChange={(value: boolean) =>
                         updateSetting(
                           "dailyDigest",
                           value
@@ -246,7 +306,6 @@ export default function SettingsPage() {
                   </div>
                 </section>
 
-                {/* Connections */}
                 <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
                   <div className="border-b border-slate-100 px-6 py-5">
                     <h2 className="font-semibold text-slate-950">
@@ -292,10 +351,40 @@ export default function SettingsPage() {
                       }
                       warning={gmailNeedsReconnect}
                     />
+
+                    <div className="px-6 py-5">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="min-w-0">
+                          <p className="font-medium text-slate-900">
+                            Telegram
+                          </p>
+
+                          <p className="mt-1 text-sm leading-6 text-slate-500">
+                            Send expenses, tasks, and commands to TriGuard through Telegram.
+                          </p>
+                        </div>
+
+                        {telegram.connected ? (
+                          <span className="w-fit shrink-0 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+                            Connected
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={connectTelegram}
+                            disabled={telegramLinkLoading}
+                            className="w-fit shrink-0 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-wait disabled:opacity-50"
+                          >
+                            {telegramLinkLoading
+                              ? "Generating link..."
+                              : "Connect Telegram"}
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </section>
 
-                {/* Account */}
                 <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                   <div>
                     <h2 className="font-semibold text-slate-950">
@@ -317,7 +406,6 @@ export default function SettingsPage() {
                   </div>
                 </section>
 
-                {/* Save */}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
                   {saved && (
                     <p className="text-sm font-medium text-emerald-600">
@@ -434,7 +522,7 @@ function ConnectionRow({
     </div>
   );
 
-  if (href) {
+  if (href && href !== "#") {
     return (
       <Link
         href={href}
@@ -445,5 +533,9 @@ function ConnectionRow({
     );
   }
 
-  return <div className="px-6 py-5">{content}</div>;
+  return (
+    <div className="px-6 py-5">
+      {content}
+    </div>
+  );
 }
