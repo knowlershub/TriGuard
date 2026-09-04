@@ -27,15 +27,10 @@ export default function CommandBar({
   const [reply, setReply] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(
+    event: FormEvent<HTMLFormElement>
+  ) {
     event.preventDefault();
-
-    const testUserId = process.env.NEXT_PUBLIC_TEST_USER_ID;
-
-    if (!testUserId) {
-      setError("NEXT_PUBLIC_TEST_USER_ID is not configured.");
-      return;
-    }
 
     const trimmed = command.trim();
 
@@ -49,12 +44,13 @@ export default function CommandBar({
     setError(null);
 
     try {
-      const result = await sendCommand(testUserId, trimmed);
+      const result = await sendCommand(trimmed);
 
       setReply(result.reply);
       setCommand("");
 
-      const freshData = await getDashboardData(testUserId);
+      const freshData = await getDashboardData();
+
       onUpdated(freshData);
     } catch (err) {
       setError(
@@ -90,7 +86,9 @@ export default function CommandBar({
           <input
             type="text"
             value={command}
-            onChange={(event) => setCommand(event.target.value)}
+            onChange={(event) =>
+              setCommand(event.target.value)
+            }
             disabled={busy}
             placeholder="/expense 1500 data"
             className="min-w-0 flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-mono outline-none transition placeholder:font-sans placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50"

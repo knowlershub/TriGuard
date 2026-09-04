@@ -1,0 +1,3 @@
+For hashing Password use:
+
+node scripts/hash-password.js "YourPasswordHere"

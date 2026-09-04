@@ -80,7 +80,6 @@ export type NotificationPreferences = {
 };
 
 export type SaveReceiptExpenseInput = {
-  testUserId?: string;
   merchant: string;
   amount: number;
   currency: string;
@@ -109,25 +108,32 @@ export type TelegramLinkResponse = {
   url: string | null;
 };
 
-export async function createTelegramLink(
-  testUserId?: string
-): Promise<TelegramLinkResponse> {
-  const response = await fetch(
-    "/api/settings/connections/telegram",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        ...(testUserId
-          ? { testUserId }
-          : {}),
-      }),
-      cache: "no-store",
-    }
-  );
+type DashboardCache = {
+  data: DashboardData;
+  expiresAt: number;
+};
 
+type GmailStatusCache = {
+  data: GmailConnectionStatus;
+  expiresAt: number;
+};
+
+let dashboardDataPromise: Promise<DashboardData> | null = null;
+
+let dashboardDataCache: DashboardCache | null = null;
+
+let gmailStatusPromise: Promise<GmailConnectionStatus> | null = null;
+
+let gmailStatusCache: GmailStatusCache | null = null;
+
+function invalidateDashboardCache(): void {
+  dashboardDataCache = null;
+}
+
+async function parseJsonResponse(
+  response: Response,
+  apiName: string
+): Promise<unknown> {
   const contentType =
     response.headers.get("content-type") ?? "";
 
@@ -135,119 +141,44 @@ export async function createTelegramLink(
     const text = await response.text();
 
     throw new Error(
-      `Telegram link API returned ${response.status} ${response.statusText}. Response starts with: ${text.slice(
+      `${apiName} returned ${response.status} ${response.statusText}. Response starts with: ${text.slice(
         0,
         120
       )}`
     );
   }
 
-  const data = await response.json();
+  const data: unknown = await response.json();
 
   if (!response.ok) {
-    throw new Error(
-      data?.error ||
-        "Failed to generate Telegram connection link."
-    );
+    const errorMessage =
+      typeof data === "object" &&
+      data !== null &&
+      "error" in data &&
+      typeof data.error === "string"
+        ? data.error
+        : `${apiName} request failed.`;
+
+    throw new Error(errorMessage);
   }
 
-  return data as TelegramLinkResponse;
+  return data;
 }
 
-export async function getTelegramConnectionStatus(
-  testUserId?: string
-): Promise<TelegramConnectionStatus> {
-  const response = await fetch(
-    `/api/settings/connections/telegram${buildQuery(
-      testUserId
-    )}`,
-    {
-      cache: "no-store",
-    }
+function isRecord(
+  value: unknown
+): value is Record<string, unknown> {
+  return (
+    typeof value === "object" &&
+    value !== null
   );
-
-  const contentType =
-    response.headers.get("content-type") ?? "";
-
-  if (
-    !contentType.includes(
-      "application/json"
-    )
-  ) {
-    const text =
-      await response.text();
-
-    throw new Error(
-      `Telegram status API returned ${response.status} ${response.statusText}. Response starts with: ${text.slice(
-        0,
-        120
-      )}`
-    );
-  }
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(
-      data?.error ||
-        "Failed to check Telegram connection."
-    );
-  }
-
-  return data as TelegramConnectionStatus;
 }
 
-/*
- * Frontend request deduplication.
- *
- * These short-lived caches prevent multiple dashboard components
- * from making duplicate requests when they mount together.
- *
- * The cache key is based on the optional testUserId used only
- * by the development fallback. Authenticated production requests
- * use an empty key and rely on the server session.
- */
-
-let dashboardDataPromise: Promise<DashboardData> | null = null;
-
-let dashboardDataCache:
-  | {
-      testUserId: string;
-      data: DashboardData;
-      expiresAt: number;
-    }
-  | null = null;
-
-let gmailStatusPromise:
-  | Promise<GmailConnectionStatus>
-  | null = null;
-
-let gmailStatusCache:
-  | {
-      testUserId: string;
-      data: GmailConnectionStatus;
-      expiresAt: number;
-    }
-  | null = null;
-
-function buildQuery(testUserId?: string) {
-  return testUserId
-    ? `?testUserId=${encodeURIComponent(
-        testUserId
-      )}`
-    : "";
-}
-
-export async function getDashboardData(
-  testUserId?: string
-): Promise<DashboardData> {
-  const cacheKey = testUserId ?? "";
+export async function getDashboardData(): Promise<DashboardData> {
   const now = Date.now();
 
   if (
     dashboardDataCache &&
-    dashboardDataCache.testUserId ===
-      cacheKey &&
     dashboardDataCache.expiresAt > now
   ) {
     return dashboardDataCache.data;
@@ -257,179 +188,98 @@ export async function getDashboardData(
     return dashboardDataPromise;
   }
 
-  dashboardDataPromise =
-    (async () => {
-      try {
-        const response =
-          await fetch(
-            `/api/dashboard${buildQuery(
-              testUserId
-            )}`,
-            {
-              cache: "no-store",
-            }
-          );
+  dashboardDataPromise = (async () => {
+    try {
+      const response = await fetch("/api/dashboard", {
+        cache: "no-store",
+      });
 
-        const contentType =
-          response.headers.get(
-            "content-type"
-          ) ?? "";
+      const data = await parseJsonResponse(
+        response,
+        "Dashboard API"
+      );
 
-        if (
-          !contentType.includes(
-            "application/json"
-          )
-        ) {
-          const text =
-            await response.text();
-
-          throw new Error(
-            `Dashboard API returned ${response.status} ${response.statusText}. Response starts with: ${text.slice(
-              0,
-              120
-            )}`
-          );
-        }
-
-        const data =
-          await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            data?.error ||
-              "Failed to load dashboard"
-          );
-        }
-
-        const result =
-          data as DashboardData;
-
-        dashboardDataCache = {
-          testUserId: cacheKey,
-          data: result,
-          expiresAt:
-            Date.now() + 5_000,
-        };
-
-        return result;
-      } finally {
-        dashboardDataPromise = null;
+      if (!isRecord(data)) {
+        throw new Error(
+          "Dashboard API returned an invalid response."
+        );
       }
-    })();
+
+      const result = data as unknown as DashboardData;
+
+      dashboardDataCache = {
+        data: result,
+        expiresAt: Date.now() + 5_000,
+      };
+
+      return result;
+    } finally {
+      dashboardDataPromise = null;
+    }
+  })();
 
   return dashboardDataPromise;
 }
 
 export async function sendCommand(
-  testUserId: string | undefined,
   text: string
 ): Promise<{ reply: string }> {
-  const response = await fetch(
-    "/api/command",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type":
-          "application/json",
-      },
-      body: JSON.stringify({
-        ...(testUserId
-          ? { testUserId }
-          : {}),
-        text,
-      }),
-    }
+  const response = await fetch("/api/command", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      text,
+    }),
+  });
+
+  const data = await parseJsonResponse(
+    response,
+    "Command API"
   );
 
-  const contentType =
-    response.headers.get(
-      "content-type"
-    ) ?? "";
-
   if (
-    !contentType.includes(
-      "application/json"
-    )
+    !isRecord(data) ||
+    typeof data.reply !== "string"
   ) {
-    const responseText =
-      await response.text();
-
     throw new Error(
-      `Command API returned ${response.status} ${response.statusText}. Response starts with: ${responseText.slice(
-        0,
-        120
-      )}`
+      "Command API returned an invalid response."
     );
   }
 
-  const data =
-    await response.json();
+  invalidateDashboardCache();
 
-  if (!response.ok) {
-    throw new Error(
-      data?.error ||
-        "Command failed"
-    );
-  }
-
-  dashboardDataCache = null;
-
-  return data;
+  return {
+    reply: data.reply,
+  };
 }
 
 export async function saveReceiptExpense(
   input: SaveReceiptExpenseInput
-) {
+): Promise<unknown> {
   const response = await fetch(
     "/api/expenses/from-receipt",
     {
       method: "POST",
       headers: {
-        "Content-Type":
-          "application/json",
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(input),
     }
   );
 
-  const contentType =
-    response.headers.get(
-      "content-type"
-    ) ?? "";
+  const data = await parseJsonResponse(
+    response,
+    "Receipt API"
+  );
 
-  if (
-    !contentType.includes(
-      "application/json"
-    )
-  ) {
-    const responseText =
-      await response.text();
-
-    throw new Error(
-      `Receipt API returned ${response.status} ${response.statusText}. Response starts with: ${responseText.slice(
-        0,
-        120
-      )}`
-    );
-  }
-
-  const data =
-    await response.json();
-
-  if (!response.ok) {
-    throw new Error(
-      data?.error ||
-        "Failed to save receipt expense."
-    );
-  }
-
-  dashboardDataCache = null;
+  invalidateDashboardCache();
 
   return data;
 }
 
 export async function updateProfile(
-  testUserId: string | undefined,
   displayName: string
 ): Promise<{
   success: boolean;
@@ -438,107 +288,73 @@ export async function updateProfile(
     displayName: string | null;
   };
 }> {
-  const response = await fetch(
-    "/api/profile",
-    {
-      method: "PATCH",
-      headers: {
-        "Content-Type":
-          "application/json",
-      },
-      body: JSON.stringify({
-        ...(testUserId
-          ? { testUserId }
-          : {}),
-        displayName,
-      }),
-    }
+  const response = await fetch("/api/profile", {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      displayName,
+    }),
+  });
+
+  const data = await parseJsonResponse(
+    response,
+    "Profile API"
   );
 
-  const contentType =
-    response.headers.get(
-      "content-type"
-    ) ?? "";
-
   if (
-    !contentType.includes(
-      "application/json"
+    !isRecord(data) ||
+    typeof data.success !== "boolean" ||
+    !isRecord(data.user) ||
+    typeof data.user.id !== "string" ||
+    !(
+      typeof data.user.displayName === "string" ||
+      data.user.displayName === null
     )
   ) {
-    const responseText =
-      await response.text();
-
     throw new Error(
-      `Profile API returned ${response.status} ${response.statusText}. Response starts with: ${responseText.slice(
-        0,
-        120
-      )}`
+      "Profile API returned an invalid response."
     );
   }
 
-  const data =
-    await response.json();
+  invalidateDashboardCache();
 
-  if (!response.ok) {
-    throw new Error(
-      data?.error ||
-        "Failed to update profile."
-    );
-  }
-
-  dashboardDataCache = null;
-
-  return data;
+  return {
+    success: data.success,
+    user: {
+      id: data.user.id,
+      displayName: data.user.displayName,
+    },
+  };
 }
 
-export async function getNotificationPreferences(
-  testUserId?: string
-): Promise<NotificationPreferences> {
+export async function getNotificationPreferences(): Promise<NotificationPreferences> {
   const response = await fetch(
-    `/api/settings/notifications${buildQuery(
-      testUserId
-    )}`,
+    "/api/settings/notifications",
     {
       cache: "no-store",
     }
   );
 
-  const contentType =
-    response.headers.get(
-      "content-type"
-    ) ?? "";
+  const data = await parseJsonResponse(
+    response,
+    "Notification API"
+  );
 
   if (
-    !contentType.includes(
-      "application/json"
-    )
+    !isRecord(data) ||
+    !isRecord(data.preferences)
   ) {
-    const text =
-      await response.text();
-
     throw new Error(
-      `Notification API returned ${response.status} ${response.statusText}, not JSON. Response starts with: ${text.slice(
-        0,
-        120
-      )}`
+      "Notification API returned an invalid response."
     );
   }
 
-  const data =
-    await response.json();
-
-  if (!response.ok) {
-    throw new Error(
-      data?.error ||
-        "Failed to load notification settings."
-    );
-  }
-
-  return data.preferences as NotificationPreferences;
+  return data.preferences as unknown as NotificationPreferences;
 }
 
 export async function updateNotificationPreferences(
-  testUserId: string | undefined,
   preferences: NotificationPreferences
 ): Promise<NotificationPreferences> {
   const response = await fetch(
@@ -546,62 +362,34 @@ export async function updateNotificationPreferences(
     {
       method: "PATCH",
       headers: {
-        "Content-Type":
-          "application/json",
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        ...(testUserId
-          ? { testUserId }
-          : {}),
-        ...preferences,
-      }),
+      body: JSON.stringify(preferences),
     }
   );
 
-  const contentType =
-    response.headers.get(
-      "content-type"
-    ) ?? "";
+  const data = await parseJsonResponse(
+    response,
+    "Notification API"
+  );
 
   if (
-    !contentType.includes(
-      "application/json"
-    )
+    !isRecord(data) ||
+    !isRecord(data.preferences)
   ) {
-    const text =
-      await response.text();
-
     throw new Error(
-      `Notification API returned ${response.status} ${response.statusText}, not JSON. Response starts with: ${text.slice(
-        0,
-        120
-      )}`
+      "Notification API returned an invalid response."
     );
   }
 
-  const data =
-    await response.json();
-
-  if (!response.ok) {
-    throw new Error(
-      data?.error ||
-        "Failed to save notification settings."
-    );
-  }
-
-  return data.preferences as NotificationPreferences;
+  return data.preferences as unknown as NotificationPreferences;
 }
 
-export async function getGmailConnectionStatus(
-  testUserId?: string
-): Promise<GmailConnectionStatus> {
-  const cacheKey = testUserId ?? "";
+export async function getGmailConnectionStatus(): Promise<GmailConnectionStatus> {
   const now = Date.now();
 
   if (
     gmailStatusCache &&
-    gmailStatusCache.testUserId ===
-      cacheKey &&
     gmailStatusCache.expiresAt > now
   ) {
     return gmailStatusCache.data;
@@ -611,65 +399,88 @@ export async function getGmailConnectionStatus(
     return gmailStatusPromise;
   }
 
-  gmailStatusPromise =
-    (async () => {
-      try {
-        const response =
-          await fetch(
-            `/api/settings/connections/gmail${buildQuery(
-              testUserId
-            )}`,
-            {
-              cache: "no-store",
-            }
-          );
-
-        const contentType =
-          response.headers.get(
-            "content-type"
-          ) ?? "";
-
-        if (
-          !contentType.includes(
-            "application/json"
-          )
-        ) {
-          const text =
-            await response.text();
-
-          throw new Error(
-            `Gmail status API returned ${response.status} ${response.statusText}. Response starts with: ${text.slice(
-              0,
-              120
-            )}`
-          );
+  gmailStatusPromise = (async () => {
+    try {
+      const response = await fetch(
+        "/api/settings/connections/gmail",
+        {
+          cache: "no-store",
         }
+      );
 
-        const data =
-          await response.json();
+      const data = await parseJsonResponse(
+        response,
+        "Gmail status API"
+      );
 
-        if (!response.ok) {
-          throw new Error(
-            data?.error ||
-              "Failed to check Gmail connection."
-          );
-        }
-
-        const result =
-          data as GmailConnectionStatus;
-
-        gmailStatusCache = {
-          testUserId: cacheKey,
-          data: result,
-          expiresAt:
-            Date.now() + 10_000,
-        };
-
-        return result;
-      } finally {
-        gmailStatusPromise = null;
+      if (!isRecord(data)) {
+        throw new Error(
+          "Gmail status API returned an invalid response."
+        );
       }
-    })();
+
+      const result =
+        data as unknown as GmailConnectionStatus;
+
+      gmailStatusCache = {
+        data: result,
+        expiresAt: Date.now() + 10_000,
+      };
+
+      return result;
+    } finally {
+      gmailStatusPromise = null;
+    }
+  })();
 
   return gmailStatusPromise;
+}
+
+export async function createTelegramLink(): Promise<TelegramLinkResponse> {
+  const response = await fetch(
+    "/api/settings/connections/telegram",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({}),
+      cache: "no-store",
+    }
+  );
+
+  const data = await parseJsonResponse(
+    response,
+    "Telegram link API"
+  );
+
+  if (!isRecord(data)) {
+    throw new Error(
+      "Telegram link API returned an invalid response."
+    );
+  }
+
+  return data as unknown as TelegramLinkResponse;
+}
+
+export async function getTelegramConnectionStatus(): Promise<TelegramConnectionStatus> {
+  const response = await fetch(
+    "/api/settings/connections/telegram",
+    {
+      cache: "no-store",
+    }
+  );
+
+  const data = await parseJsonResponse(
+    response,
+    "Telegram status API"
+  );
+
+  if (!isRecord(data)) {
+    throw new Error(
+      "Telegram status API returned an invalid response."
+    );
+  }
+
+  return data as unknown as TelegramConnectionStatus;
 }

@@ -20,20 +20,17 @@ export default function AddExpense({
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(
+    event: FormEvent<HTMLFormElement>
+  ) {
     event.preventDefault();
-
-    const testUserId = process.env.NEXT_PUBLIC_TEST_USER_ID;
-
-    if (!testUserId) {
-      setError("NEXT_PUBLIC_TEST_USER_ID is not configured.");
-      return;
-    }
 
     const trimmed = value.trim();
 
     if (!trimmed) {
-      setError("Enter an amount and description, for example: 1500 data");
+      setError(
+        "Enter an amount and description, for example: 1500 data"
+      );
       return;
     }
 
@@ -43,14 +40,13 @@ export default function AddExpense({
 
     try {
       const response = await sendCommand(
-        testUserId,
         `/expense ${trimmed}`
       );
 
       setMessage(response.reply);
       setValue("");
 
-      const freshData = await getDashboardData(testUserId);
+      const freshData = await getDashboardData();
       onUpdated(freshData);
     } catch (err) {
       setError(
@@ -71,7 +67,8 @@ export default function AddExpense({
         </h2>
 
         <p className="mt-1 text-sm text-slate-500">
-          Use the same expense parser used by your existing command API.
+          Use the same expense parser used by your existing
+          command API.
         </p>
       </div>
 
@@ -82,7 +79,9 @@ export default function AddExpense({
         <input
           type="text"
           value={value}
-          onChange={(event) => setValue(event.target.value)}
+          onChange={(event) =>
+            setValue(event.target.value)
+          }
           disabled={saving}
           placeholder="e.g. 1500 data"
           className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50"

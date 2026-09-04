@@ -1,17 +1,50 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { handleForwardedSms } from "@/lib/handlers/smsForward";
-import { parseCommand, routeCommand } from "@/lib/commandRouter";
+import {
+  parseCommand,
+  routeCommand,
+} from "@/lib/commandRouter";
 import { resolveApiUser } from "@/lib/apiAuth";
+
+const MAX_COMMAND_LENGTH = 4000;
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => null);
 
-    if (!body?.text) {
+    if (!body || typeof body !== "object") {
       return NextResponse.json(
         {
-          error: "Body must include text",
+          error: "Invalid JSON body.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    if (
+      typeof body.text !== "string" ||
+      !body.text.trim()
+    ) {
+      return NextResponse.json(
+        {
+          error: "Body must include text.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    const text = body.text.trim();
+
+    if (text.length > MAX_COMMAND_LENGTH) {
+      return NextResponse.json(
+        {
+          error:
+            "Command is too long.",
         },
         {
           status: 400,
@@ -39,9 +72,7 @@ export async function POST(req: NextRequest) {
 
     const user = resolved.user;
 
-    const parsed = parseCommand(
-      String(body.text)
-    );
+    const parsed = parseCommand(text);
 
     const reply = parsed
       ? await routeCommand(
@@ -50,7 +81,7 @@ export async function POST(req: NextRequest) {
         )
       : await handleForwardedSms(
           user.id,
-          String(body.text)
+          text
         );
 
     return NextResponse.json({

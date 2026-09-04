@@ -10,24 +10,23 @@ export async function GET(
 ) {
   try {
     const testUserId =
-      req.nextUrl.searchParams.get(
-        "testUserId"
-      );
+      process.env.NODE_ENV !==
+      "production"
+        ? req.nextUrl.searchParams.get(
+            "testUserId"
+          )
+        : null;
 
     const resolved =
-      await resolveApiUser(
-        testUserId
-      );
+      await resolveApiUser(testUserId);
 
     if (resolved.status !== 200) {
       return NextResponse.json(
         {
-          error:
-            resolved.error,
+          error: resolved.error,
         },
         {
-          status:
-            resolved.status,
+          status: resolved.status,
         }
       );
     }
@@ -40,7 +39,6 @@ export async function GET(
           provider: "gmail",
         },
         select: {
-          id: true,
           emailAddress: true,
           provider: true,
           expiresAt: true,

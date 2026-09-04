@@ -22,15 +22,20 @@ type EmailFilter =
   | "other";
 
 export default function InboxPage() {
-  const [data, setData] = useState<DashboardData | null>(null);
+  const [data, setData] =
+    useState<DashboardData | null>(null);
+
   const [gmail, setGmail] =
     useState<GmailConnectionStatus | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] =
+    useState<string | null>(null);
+
+  const [message, setMessage] =
+    useState<string | null>(null);
 
   const [lastChecked, setLastChecked] =
     useState<Date | null>(null);
@@ -42,19 +47,10 @@ export default function InboxPage() {
     useState<EmailFilter>("all");
 
   async function loadInbox() {
-    const testUserId =
-      process.env.NEXT_PUBLIC_TEST_USER_ID;
-
-    if (!testUserId) {
-      throw new Error(
-        "NEXT_PUBLIC_TEST_USER_ID is not configured."
-      );
-    }
-
     const [dashboardData, gmailStatus] =
       await Promise.all([
-        getDashboardData(testUserId),
-        getGmailConnectionStatus(testUserId),
+        getDashboardData(),
+        getGmailConnectionStatus(),
       ]);
 
     setData(dashboardData);
@@ -79,16 +75,6 @@ export default function InboxPage() {
   }, []);
 
   async function runEmailPipeline() {
-    const testUserId =
-      process.env.NEXT_PUBLIC_TEST_USER_ID;
-
-    if (!testUserId) {
-      setError(
-        "NEXT_PUBLIC_TEST_USER_ID is not configured."
-      );
-      return;
-    }
-
     if (!gmail?.connected) {
       setError(
         "Gmail is not connected. Connect Gmail before checking the inbox."
@@ -108,10 +94,7 @@ export default function InboxPage() {
     setMessage(null);
 
     try {
-      const result = await sendCommand(
-        testUserId,
-        "/email"
-      );
+      const result = await sendCommand("/email");
 
       setMessage(result.reply);
 
@@ -142,14 +125,8 @@ export default function InboxPage() {
     });
   }
 
-  const testUserId =
-    process.env.NEXT_PUBLIC_TEST_USER_ID;
-
-  const gmailConnectUrl = testUserId
-    ? `/api/auth/gmail/start?userId=${encodeURIComponent(
-        testUserId
-      )}`
-    : "#";
+  const gmailConnectUrl =
+    "/api/auth/gmail/start";
 
   const gmailConnected =
     gmail?.connected === true &&

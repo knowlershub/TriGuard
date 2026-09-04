@@ -22,16 +22,7 @@ export default function ProfilePage() {
   const [message, setMessage] = useState<string | null>(null);
 
   async function loadProfile() {
-    const testUserId = process.env.NEXT_PUBLIC_TEST_USER_ID;
-
-    if (!testUserId) {
-      throw new Error(
-        "NEXT_PUBLIC_TEST_USER_ID is not configured."
-      );
-    }
-
-    const freshData = await getDashboardData(testUserId);
-
+const freshData = await getDashboardData();
     setData(freshData);
     setDisplayName(
       freshData.user.displayName?.trim() || "TriGuard User"
@@ -49,15 +40,6 @@ export default function ProfilePage() {
   }, []);
 
   async function saveProfile() {
-    const testUserId = process.env.NEXT_PUBLIC_TEST_USER_ID;
-
-    if (!testUserId) {
-      setError(
-        "NEXT_PUBLIC_TEST_USER_ID is not configured."
-      );
-      return;
-    }
-
     const trimmedName = displayName.trim();
 
     if (!trimmedName) {
@@ -70,10 +52,8 @@ export default function ProfilePage() {
     setMessage(null);
 
     try {
-      const result = await updateProfile(
-        testUserId,
-        trimmedName
-      );
+      const result = await updateProfile(trimmedName);
+    
 
       setDisplayName(
         result.user.displayName || trimmedName
@@ -305,17 +285,6 @@ export default function ProfilePage() {
                   </div>
                 </section>
 
-                <section className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
-                  <p className="text-sm font-semibold text-amber-950">
-                    Authentication is still in development
-                  </p>
-
-                  <p className="mt-1 text-sm leading-6 text-amber-800">
-                    This prototype currently identifies the user with the
-                    test-user environment variable. Production authentication
-                    will replace that mechanism.
-                  </p>
-                </section>
               </div>
             )}
           </div>

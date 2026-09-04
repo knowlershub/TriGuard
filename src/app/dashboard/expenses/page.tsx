@@ -18,15 +18,7 @@ export default function ExpensesPage() {
   const [error, setError] = useState<string | null>(null);
 
   async function loadExpenses() {
-    const testUserId = process.env.NEXT_PUBLIC_TEST_USER_ID;
-
-    if (!testUserId) {
-      throw new Error(
-        "NEXT_PUBLIC_TEST_USER_ID is not configured."
-      );
-    }
-
-    const freshData = await getDashboardData(testUserId);
+    const freshData = await getDashboardData();
     setData(freshData);
   }
 

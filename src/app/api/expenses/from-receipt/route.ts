@@ -10,11 +10,16 @@ const ALLOWED_CURRENCIES = new Set([
   "EUR",
 ]);
 
+const MAX_AMOUNT = 1_000_000_000_000;
+const MAX_MERCHANT_LENGTH = 200;
+const MAX_CATEGORY_LENGTH = 100;
+const MAX_RAW_TEXT_LENGTH = 10_000;
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => null);
 
-    if (!body) {
+    if (!body || typeof body !== "object") {
       return NextResponse.json(
         {
           error: "Invalid JSON body.",
@@ -54,12 +59,13 @@ export async function POST(req: NextRequest) {
 
     if (
       !Number.isFinite(numericAmount) ||
-      numericAmount <= 0
+      numericAmount <= 0 ||
+      numericAmount > MAX_AMOUNT
     ) {
       return NextResponse.json(
         {
           error:
-            "Amount must be a positive number.",
+            "Amount must be a positive number within the allowed limit.",
         },
         {
           status: 400,
@@ -79,6 +85,108 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error: "Unsupported currency.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    if (
+      merchant !== undefined &&
+      merchant !== null &&
+      typeof merchant !== "string"
+    ) {
+      return NextResponse.json(
+        {
+          error: "Merchant must be a string.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    if (
+      category !== undefined &&
+      category !== null &&
+      typeof category !== "string"
+    ) {
+      return NextResponse.json(
+        {
+          error: "Category must be a string.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    if (
+      rawText !== undefined &&
+      rawText !== null &&
+      typeof rawText !== "string"
+    ) {
+      return NextResponse.json(
+        {
+          error: "Raw text must be a string.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    const normalizedMerchant =
+      typeof merchant === "string"
+        ? merchant.trim()
+        : "";
+
+    const normalizedCategory =
+      typeof category === "string"
+        ? category.trim()
+        : "";
+
+    const normalizedRawText =
+      typeof rawText === "string"
+        ? rawText.trim()
+        : "";
+
+    if (
+      normalizedMerchant.length >
+      MAX_MERCHANT_LENGTH
+    ) {
+      return NextResponse.json(
+        {
+          error: "Merchant name is too long.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    if (
+      normalizedCategory.length >
+      MAX_CATEGORY_LENGTH
+    ) {
+      return NextResponse.json(
+        {
+          error: "Category is too long.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    if (
+      normalizedRawText.length >
+      MAX_RAW_TEXT_LENGTH
+    ) {
+      return NextResponse.json(
+        {
+          error: "Receipt text is too long.",
         },
         {
           status: 400,
@@ -140,22 +248,12 @@ export async function POST(req: NextRequest) {
           currency:
             normalizedCurrency,
           category:
-            typeof category === "string" &&
-            category.trim()
-              ? category.trim()
-              : null,
+            normalizedCategory || null,
           merchant:
-            typeof merchant === "string" &&
-            merchant.trim()
-              ? merchant.trim()
-              : null,
+            normalizedMerchant || null,
           source: "receipt_ocr",
           rawInput:
-            typeof rawText ===
-              "string" &&
-            rawText.trim()
-              ? rawText.trim()
-              : null,
+            normalizedRawText || null,
           parsedBy:
             "ocr:tesseract",
           occurredAt:

@@ -216,16 +216,6 @@ export default function ReceiptScanner({
   }
 
   async function saveExpense() {
-    const testUserId =
-      process.env.NEXT_PUBLIC_TEST_USER_ID;
-
-    if (!testUserId) {
-      setError(
-        "NEXT_PUBLIC_TEST_USER_ID is not configured."
-      );
-      return;
-    }
-
     const trimmedMerchant = merchant.trim();
     const numericAmount = Number(amount);
 
@@ -254,12 +244,10 @@ export default function ReceiptScanner({
 
     try {
       await saveReceiptExpense({
-        testUserId,
         merchant: trimmedMerchant,
         amount: numericAmount,
         currency,
-        category:
-          category.trim() || "Other",
+        category: category.trim() || "Other",
         occurredAt,
         rawText: result?.rawText ?? "",
       });
@@ -268,10 +256,7 @@ export default function ReceiptScanner({
         "Receipt expense saved successfully."
       );
 
-      const freshData =
-        await getDashboardData(testUserId);
-
-      void freshData;
+      await getDashboardData();
 
       if (onSaved) {
         await onSaved();

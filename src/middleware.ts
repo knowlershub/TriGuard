@@ -1,53 +1,11 @@
-import { auth } from "@/auth";
-import { NextResponse } from "next/server";
+import NextAuth from "next-auth";
 
-export default auth((req) => {
-  const isAuthenticated =
-    !!req.auth;
+import authConfig from "@/auth.config";
 
-  const isDashboardRoute =
-    req.nextUrl.pathname.startsWith(
-      "/dashboard"
-    );
+export const { auth: middleware } =
+  NextAuth(authConfig);
 
-  const isAuthPage =
-    req.nextUrl.pathname === "/login" ||
-    req.nextUrl.pathname === "/signup";
-
-  if (
-    isDashboardRoute &&
-    !isAuthenticated
-  ) {
-    const loginUrl =
-      new URL(
-        "/login",
-        req.nextUrl.origin
-      );
-
-    loginUrl.searchParams.set(
-      "callbackUrl",
-      req.nextUrl.pathname
-    );
-
-    return NextResponse.redirect(
-      loginUrl
-    );
-  }
-
-  if (
-    isAuthPage &&
-    isAuthenticated
-  ) {
-    return NextResponse.redirect(
-      new URL(
-        "/dashboard",
-        req.nextUrl.origin
-      )
-    );
-  }
-
-  return NextResponse.next();
-});
+export default middleware;
 
 export const config = {
   matcher: [

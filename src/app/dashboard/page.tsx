@@ -22,17 +22,8 @@ export default function DashboardPage() {
     useState(false);
 
   async function loadDashboard() {
-    const testUserId =
-      process.env.NEXT_PUBLIC_TEST_USER_ID;
-
-    if (!testUserId) {
-      throw new Error(
-        "NEXT_PUBLIC_TEST_USER_ID is not configured."
-      );
-    }
-
     const freshData =
-      await getDashboardData(testUserId);
+      await getDashboardData();
 
     setData(freshData);
   }
@@ -90,7 +81,24 @@ export default function DashboardPage() {
 
             {error && (
               <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
-                {error}
+                <p className="font-semibold">
+                  We couldn't load your dashboard.
+                </p>
+
+                <p className="mt-1">
+                  {error}
+                </p>
+
+                <button
+                  type="button"
+                  onClick={handleRefresh}
+                  disabled={refreshing}
+                  className="mt-4 rounded-xl bg-red-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-800 disabled:cursor-wait disabled:opacity-60"
+                >
+                  {refreshing
+                    ? "Retrying..."
+                    : "Try again"}
+                </button>
               </div>
             )}
 
@@ -208,10 +216,11 @@ export default function DashboardPage() {
                           </p>
 
                           <p className="mt-1 text-sm text-red-700">
-                            {data.leaks.length} category
+                            {data.leaks.length} categor
                             {data.leaks.length === 1
-                              ? ""
-                              : "ies"} spending above baseline.
+                              ? "y"
+                              : "ies"}{" "}
+                            spending above baseline.
                           </p>
                         </div>
                       ) : (

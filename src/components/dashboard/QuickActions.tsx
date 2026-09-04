@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+
 import {
   getDashboardData,
   sendCommand,
@@ -14,32 +15,27 @@ type QuickActionsProps = {
 export default function QuickActions({
   onUpdated,
 }: QuickActionsProps) {
-  const [mode, setMode] = useState<"expense" | "task">("expense");
+  const [mode, setMode] =
+    useState<"expense" | "task">("expense");
+
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] =
+    useState<string | null>(null);
+
+  const [error, setError] =
+    useState<string | null>(null);
 
   async function refreshDashboard() {
-    const testUserId = process.env.NEXT_PUBLIC_TEST_USER_ID;
+    const freshData = await getDashboardData();
 
-    if (!testUserId) {
-      throw new Error("NEXT_PUBLIC_TEST_USER_ID is not configured.");
-    }
-
-    const freshData = await getDashboardData(testUserId);
     onUpdated(freshData);
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(
+    event: FormEvent<HTMLFormElement>
+  ) {
     event.preventDefault();
-
-    const testUserId = process.env.NEXT_PUBLIC_TEST_USER_ID;
-
-    if (!testUserId) {
-      setError("NEXT_PUBLIC_TEST_USER_ID is not configured.");
-      return;
-    }
 
     const trimmed = value.trim();
 
@@ -62,7 +58,7 @@ export default function QuickActions({
           ? `/expense ${trimmed}`
           : `/task ${trimmed}`;
 
-      const result = await sendCommand(testUserId, command);
+      const result = await sendCommand(command);
 
       setMessage(result.reply);
       setValue("");
@@ -125,9 +121,15 @@ export default function QuickActions({
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row">
+      <form
+        onSubmit={handleSubmit}
+        className="flex flex-col gap-3 sm:flex-row"
+      >
         <div className="flex-1">
-          <label htmlFor="quick-action" className="sr-only">
+          <label
+            htmlFor="quick-action"
+            className="sr-only"
+          >
             {mode === "expense"
               ? "Expense"
               : "Task"}
@@ -136,7 +138,9 @@ export default function QuickActions({
           <input
             id="quick-action"
             value={value}
-            onChange={(event) => setValue(event.target.value)}
+            onChange={(event) =>
+              setValue(event.target.value)
+            }
             placeholder={
               mode === "expense"
                 ? "e.g. 2350 fuel"
@@ -152,7 +156,11 @@ export default function QuickActions({
           disabled={busy}
           className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"
         >
-          {busy ? "Saving..." : mode === "expense" ? "Log" : "Create"}
+          {busy
+            ? "Saving..."
+            : mode === "expense"
+              ? "Log"
+              : "Create"}
         </button>
       </form>
 

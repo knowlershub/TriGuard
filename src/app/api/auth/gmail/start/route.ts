@@ -1,23 +1,59 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getGmailAuthUrl } from "@/lib/googleOAuth";
-import { getOrCreateUser } from "@/lib/users";
 
-export async function GET(req: NextRequest) {
-  const externalUserId = req.nextUrl.searchParams.get("userId");
+import { resolveApiUser } from "@/lib/apiAuth";
+import {
+  createGmailOAuthState,
+  getGoogleAuthUrl,
+} from "@/lib/googleOAuth";
 
-  if (!externalUserId) {
+export async function GET(
+  req: NextRequest
+) {
+  try {
+    const testUserId =
+      req.nextUrl.searchParams.get(
+        "userId"
+      );
+
+    const resolved =
+      await resolveApiUser(testUserId);
+
+    if (resolved.status !== 200) {
+      return NextResponse.json(
+        {
+          error: resolved.error,
+        },
+        {
+          status: resolved.status,
+        }
+      );
+    }
+
+    const userId = resolved.user.id;
+
+    const state =
+      createGmailOAuthState(userId);
+
+    const authUrl =
+      getGoogleAuthUrl(state);
+
+    return NextResponse.redirect(
+      authUrl
+    );
+  } catch (error) {
+    console.error(
+      "Gmail OAuth start error:",
+      error
+    );
+
     return NextResponse.json(
-      { error: "Missing userId query param" },
-      { status: 400 }
+      {
+        error:
+          "Unable to start Gmail connection.",
+      },
+      {
+        status: 500,
+      }
     );
   }
-
-  const user = await getOrCreateUser(
-    "test",
-    externalUserId
-  );
-
-  const authUrl = getGmailAuthUrl(user.id);
-
-  return NextResponse.redirect(authUrl);
 }

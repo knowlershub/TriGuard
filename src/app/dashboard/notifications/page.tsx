@@ -57,19 +57,9 @@ export default function NotificationsPage() {
     useState<Set<string>>(new Set());
 
   useEffect(() => {
-    const testUserId =
-      process.env.NEXT_PUBLIC_TEST_USER_ID;
-
-    if (!testUserId) {
-      setError(
-        "NEXT_PUBLIC_TEST_USER_ID is not configured."
-      );
-      return;
-    }
-
     Promise.all([
-      getDashboardData(testUserId),
-      getNotificationPreferences(testUserId),
+      getDashboardData(),
+      getNotificationPreferences(),
     ])
       .then(
         ([
@@ -240,8 +230,7 @@ export default function NotificationsPage() {
         href:
           activity.type === "expense"
             ? "/dashboard/expenses"
-            : activity.type ===
-                "task"
+            : activity.type === "task"
               ? "/dashboard/tasks"
               : "/dashboard/inbox",
         priority: "low",
@@ -505,8 +494,7 @@ export default function NotificationsPage() {
                       )}
                     </div>
 
-                    {notifications.length >
-                      8 && (
+                    {notifications.length > 8 && (
                       <div className="border-t border-slate-100 px-5 py-4 text-center">
                         <button
                           type="button"

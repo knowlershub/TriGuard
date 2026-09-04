@@ -12,11 +12,12 @@ export async function resolveAuthenticatedUser() {
     } as const;
   }
 
-  const user = await prisma.user.findUnique({
-    where: {
-      id: session.user.id,
-    },
-  });
+  const user =
+    await prisma.user.findUnique({
+      where: {
+        id: session.user.id,
+      },
+    });
 
   if (!user) {
     return {
@@ -41,14 +42,16 @@ export async function resolveApiUser(
     return authenticated;
   }
 
-  const isDevelopment =
-    process.env.NODE_ENV !== "production";
-
-  if (isDevelopment && testUserId) {
+  if (
+    process.env.NODE_ENV !==
+      "production" &&
+    typeof testUserId === "string" &&
+    testUserId.trim()
+  ) {
     const user =
       await getOrCreateUser(
         "test",
-        String(testUserId)
+        testUserId.trim()
       );
 
     return {
@@ -58,37 +61,4 @@ export async function resolveApiUser(
   }
 
   return authenticated;
-}
-
-/**
- * Legacy resolver retained for existing development callers.
- */
-export async function resolveUserId(
-  userId: string | null
-) {
-  if (!userId) {
-    return {
-      error: "Missing userId query param",
-      status: 400,
-    } as const;
-  }
-
-  const user =
-    await prisma.user.findUnique({
-      where: {
-        id: userId,
-      },
-    });
-
-  if (!user) {
-    return {
-      error: `No user found with id ${userId}`,
-      status: 404,
-    } as const;
-  }
-
-  return {
-    user,
-    status: 200,
-  } as const;
 }

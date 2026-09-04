@@ -40,37 +40,40 @@ const DEFAULT_TELEGRAM_STATUS: TelegramConnectionStatus = {
 
 export default function SettingsPage() {
   const [settings, setSettings] =
-    useState<NotificationPreferences>(DEFAULT_PREFERENCES);
+    useState<NotificationPreferences>(
+      DEFAULT_PREFERENCES
+    );
 
   const [gmail, setGmail] =
-    useState<GmailConnectionStatus>(DEFAULT_GMAIL_STATUS);
+    useState<GmailConnectionStatus>(
+      DEFAULT_GMAIL_STATUS
+    );
 
   const [telegram, setTelegram] =
-    useState<TelegramConnectionStatus>(DEFAULT_TELEGRAM_STATUS);
+    useState<TelegramConnectionStatus>(
+      DEFAULT_TELEGRAM_STATUS
+    );
 
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [telegramLinkLoading, setTelegramLinkLoading] = useState(false);
+  const [loading, setLoading] =
+    useState(true);
 
-  const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] =
+    useState(false);
+
+  const [telegramLinkLoading, setTelegramLinkLoading] =
+    useState(false);
+
+  const [error, setError] =
+    useState<string | null>(null);
+
+  const [saved, setSaved] =
+    useState(false);
 
   useEffect(() => {
-    const testUserId =
-      process.env.NEXT_PUBLIC_TEST_USER_ID;
-
-    if (!testUserId) {
-      setError(
-        "NEXT_PUBLIC_TEST_USER_ID is not configured."
-      );
-      setLoading(false);
-      return;
-    }
-
     Promise.all([
-      getNotificationPreferences(testUserId),
-      getGmailConnectionStatus(testUserId),
-      getTelegramConnectionStatus(testUserId),
+      getNotificationPreferences(),
+      getGmailConnectionStatus(),
+      getTelegramConnectionStatus(),
     ])
       .then(
         ([
@@ -108,16 +111,6 @@ export default function SettingsPage() {
   }
 
   async function saveSettings() {
-    const testUserId =
-      process.env.NEXT_PUBLIC_TEST_USER_ID;
-
-    if (!testUserId) {
-      setError(
-        "NEXT_PUBLIC_TEST_USER_ID is not configured."
-      );
-      return;
-    }
-
     setSaving(true);
     setError(null);
     setSaved(false);
@@ -125,7 +118,6 @@ export default function SettingsPage() {
     try {
       const updated =
         await updateNotificationPreferences(
-          testUserId,
           settings
         );
 
@@ -147,22 +139,12 @@ export default function SettingsPage() {
   }
 
   async function connectTelegram() {
-    const testUserId =
-      process.env.NEXT_PUBLIC_TEST_USER_ID;
-
-    if (!testUserId) {
-      setError(
-        "NEXT_PUBLIC_TEST_USER_ID is not configured."
-      );
-      return;
-    }
-
     setTelegramLinkLoading(true);
     setError(null);
 
     try {
       const result =
-        await createTelegramLink(testUserId);
+        await createTelegramLink();
 
       if (!result.url) {
         throw new Error(
@@ -186,14 +168,8 @@ export default function SettingsPage() {
     }
   }
 
-  const testUserId =
-    process.env.NEXT_PUBLIC_TEST_USER_ID;
-
-  const gmailConnectUrl = testUserId
-    ? `/api/auth/gmail/start?userId=${encodeURIComponent(
-        testUserId
-      )}`
-    : "#";
+  const gmailConnectUrl =
+    "/api/auth/gmail/start";
 
   const gmailNeedsReconnect =
     gmail.connected && gmail.expired;
