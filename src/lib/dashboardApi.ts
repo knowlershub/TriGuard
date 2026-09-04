@@ -463,6 +463,29 @@ export async function createTelegramLink(): Promise<TelegramLinkResponse> {
   return data as unknown as TelegramLinkResponse;
 }
 
+export async function unlinkTelegram(): Promise<TelegramConnectionStatus> {
+  const response = await fetch(
+    "/api/settings/connections/telegram",
+    {
+      method: "DELETE",
+      cache: "no-store",
+    }
+  );
+
+  const data = await parseJsonResponse(
+    response,
+    "Telegram unlink API"
+  );
+
+  if (!isRecord(data)) {
+    throw new Error(
+      "Telegram unlink API returned an invalid response."
+    );
+  }
+
+  return data as unknown as TelegramConnectionStatus;
+}
+
 export async function getTelegramConnectionStatus(): Promise<TelegramConnectionStatus> {
   const response = await fetch(
     "/api/settings/connections/telegram",

@@ -11,6 +11,7 @@ import {
   getGmailConnectionStatus,
   getNotificationPreferences,
   getTelegramConnectionStatus,
+  unlinkTelegram,
   updateNotificationPreferences,
   type GmailConnectionStatus,
   type NotificationPreferences,
@@ -166,6 +167,21 @@ export default function SettingsPage() {
       );
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function unlinkTelegramAccount() {
+    setError(null);
+
+    try {
+      const result = await unlinkTelegram();
+      setTelegram(result);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to unlink Telegram."
+      );
     }
   }
 
