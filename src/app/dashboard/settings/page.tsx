@@ -383,22 +383,32 @@ export default function SettingsPage() {
                           </p>
                         </div>
 
-                        {telegram.connected ? (
-                          <span className="w-fit shrink-0 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
-                            Connected
-                          </span>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={connectTelegram}
-                            disabled={telegramLinkLoading}
-                            className="w-fit shrink-0 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-wait disabled:opacity-50"
-                          >
-                            {telegramLinkLoading
-                              ? "Generating link..."
-                              : "Connect Telegram"}
-                          </button>
-                        )}
+{telegram.connected ? (
+  <div className="flex w-fit shrink-0 items-center gap-2">
+    <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+      Connected
+    </span>
+
+    <button
+      type="button"
+      onClick={unlinkTelegramAccount}
+      className="rounded-xl border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-50"
+    >
+      Unlink
+    </button>
+  </div>
+) : (
+  <button
+    type="button"
+    onClick={connectTelegram}
+    disabled={telegramLinkLoading}
+    className="w-fit shrink-0 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-wait disabled:opacity-50"
+  >
+    {telegramLinkLoading
+      ? "Generating link..."
+      : "Connect Telegram"}
+  </button>
+)}                        
                       </div>
                     </div>
                   </div>

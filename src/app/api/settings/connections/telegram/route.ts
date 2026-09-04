@@ -101,3 +101,57 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+export async function DELETE(req: NextRequest) {
+  try {
+    const testUserId =
+      req.nextUrl.searchParams.get("testUserId");
+
+    const resolved =
+      await resolveApiUser(testUserId);
+
+    if (resolved.status !== 200) {
+      return NextResponse.json(
+        { error: resolved.error },
+        { status: resolved.status }
+      );
+    }
+
+    await prisma.user.update({
+      where: {
+        id: resolved.user.id,
+      },
+      data: {
+        telegramId: null,
+      },
+    });
+
+    await prisma.telegramLinkCode.updateMany({
+      where: {
+        userId: resolved.user.id,
+        usedAt: null,
+      },
+      data: {
+        usedAt: new Date(),
+      },
+    });
+
+    return NextResponse.json({
+      connected: false,
+      telegramId: null,
+    });
+  } catch (error) {
+    console.error(
+      "Telegram unlink error:",
+      error
+    );
+
+    return NextResponse.json(
+      {
+        error: "Failed to unlink Telegram.",
+      },
+      {
+        status: 500,
+      }
+    );
+  }
+}
