@@ -152,11 +152,7 @@ export default function SettingsPage() {
         );
       }
 
-      window.open(
-        result.url,
-        "_blank",
-        "noopener,noreferrer"
-      );
+      window.location.assign(result.url);
     } catch (err) {
       setError(
         err instanceof Error

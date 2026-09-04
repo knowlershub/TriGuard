@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { prisma } from "@/lib/prisma";
 import { getOrCreateUser } from "@/lib/users";
 import {
   parseCommand,
@@ -12,9 +13,132 @@ import {
   downloadTelegramPhoto,
 } from "@/lib/telegram";
 
-export async function POST(
-  req: NextRequest
-) {
+async function handleTelegramStart(
+  chatId: string | number,
+  telegramUserId: string,
+  text: string
+): Promise<boolean> {
+  const match = text.trim().match(/^\/start(?:@\w+)?(?:\s+(.+))?$/i);
+
+  if (!match) {
+    return false;
+  }
+
+  const code = match[1]?.trim();
+
+  if (!code) {
+    await sendTelegramMessage(
+      chatId,
+      "Welcome to TriGuard. To connect this Telegram account, use the Connect Telegram button in your TriGuard Settings."
+    );
+
+    return true;
+  }
+
+  const linkCode = await prisma.telegramLinkCode.findUnique({
+    where: {
+      code,
+    },
+    select: {
+      code: true,
+      userId: true,
+      expiresAt: true,
+      usedAt: true,
+    },
+  });
+
+  if (!linkCode) {
+    await sendTelegramMessage(
+      chatId,
+      "That TriGuard connection link is invalid. Please generate a new link from Settings."
+    );
+
+    return true;
+  }
+
+  if (linkCode.usedAt) {
+    await sendTelegramMessage(
+      chatId,
+      "That TriGuard connection link has already been used. Please generate a new link from Settings."
+    );
+
+    return true;
+  }
+
+  if (linkCode.expiresAt.getTime() <= Date.now()) {
+    await sendTelegramMessage(
+      chatId,
+      "That TriGuard connection link has expired. Please generate a new link from Settings."
+    );
+
+    return true;
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const claimed = await tx.telegramLinkCode.updateMany({
+        where: {
+          code: linkCode.code,
+          usedAt: null,
+          expiresAt: {
+            gt: new Date(),
+          },
+        },
+        data: {
+          usedAt: new Date(),
+        },
+      });
+
+      if (claimed.count !== 1) {
+        throw new Error("TELEGRAM_LINK_CODE_ALREADY_CLAIMED");
+      }
+
+      await tx.user.update({
+        where: {
+          id: linkCode.userId,
+        },
+        data: {
+          telegramId: telegramUserId,
+        },
+      });
+    });
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === "TELEGRAM_LINK_CODE_ALREADY_CLAIMED"
+    ) {
+      await sendTelegramMessage(
+        chatId,
+        "That TriGuard connection link is no longer available. Please generate a new link from Settings."
+      );
+
+      return true;
+    }
+
+    if (
+      error instanceof Error &&
+      error.message.includes("Unique constraint")
+    ) {
+      await sendTelegramMessage(
+        chatId,
+        "This Telegram account is already connected to another TriGuard account."
+      );
+
+      return true;
+    }
+
+    throw error;
+  }
+
+  await sendTelegramMessage(
+    chatId,
+    "Telegram connected successfully. You can now send expenses, receipts, and commands to TriGuard here."
+  );
+
+  return true;
+}
+
+export async function POST(req: NextRequest) {
   try {
     const webhookSecret =
       process.env.TELEGRAM_WEBHOOK_SECRET;
@@ -103,6 +227,24 @@ export async function POST(
 
     const telegramUserIdString =
       String(telegramUserId);
+
+    if (
+      typeof message.text === "string" &&
+      message.text.trim()
+    ) {
+      const handledStart =
+        await handleTelegramStart(
+          chatId,
+          telegramUserIdString,
+          message.text
+        );
+
+      if (handledStart) {
+        return NextResponse.json({
+          status: "ok",
+        });
+      }
+    }
 
     if (message.photo) {
       const user =
@@ -216,7 +358,7 @@ export async function POST(
         status: "error",
       },
       {
-        status: 500,
+        status: 500
       }
     );
   }
