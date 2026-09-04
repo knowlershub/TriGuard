@@ -98,6 +98,37 @@ export default function SettingsPage() {
       });
   }, []);
 
+  useEffect(() => {
+  async function refreshTelegramStatus() {
+    try {
+      const telegramStatus =
+        await getTelegramConnectionStatus();
+
+      setTelegram(telegramStatus);
+    } catch {
+      // Keep the current status if the refresh fails.
+    }
+  }
+
+  function handleVisibilityChange() {
+    if (document.visibilityState === "visible") {
+      void refreshTelegramStatus();
+    }
+  }
+
+  document.addEventListener(
+    "visibilitychange",
+    handleVisibilityChange
+  );
+
+  return () => {
+    document.removeEventListener(
+      "visibilitychange",
+      handleVisibilityChange
+    );
+  };
+}, []);
+
   function updateSetting(
     key: keyof NotificationPreferences,
     value: boolean
