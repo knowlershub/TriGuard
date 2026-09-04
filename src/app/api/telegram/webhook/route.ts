@@ -246,6 +246,20 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    if (
+      typeof message.text === "string" &&
+      message.text.trim().match(/^\/id(?:@\w+)?$/i)
+    ) {
+      await sendTelegramMessage(
+        chatId,
+        `🆔 Your Telegram ID:\n\n${telegramUserIdString}`
+      );
+
+      return NextResponse.json({
+        status: "ok",
+      });
+    }
+
     if (message.photo) {
       const user =
         await getOrCreateUser(

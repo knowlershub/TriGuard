@@ -87,6 +87,12 @@ Start or connect your Telegram account to TriGuard.
 The safest way to connect is:
 TriGuard Settings → Connect Telegram → open the generated Telegram link.
 
+/id
+Show your Telegram account ID.
+
+Example:
+/id
+
 
 ❓ HELP
 

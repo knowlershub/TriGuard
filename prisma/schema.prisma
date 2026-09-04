@@ -1,10 +1,12 @@
 generator client {
   provider = "prisma-client-js"
 }
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
 model User {
   id                     String                    @id @default(cuid())
   whatsappId             String?                   @unique
@@ -14,12 +16,14 @@ model User {
   emailAccount           EmailAccount?
   emailLogs              EmailLog[]
   expenses               Expense[]
+  notificationPreference NotificationPreference?
   pendingEvents          PendingCrossModuleEvent[]
   tasks                  Task[]
-  notificationPreference NotificationPreference?
   telegramLinkCodes      TelegramLinkCode[]
+
   @@map("users")
 }
+
 model WebAccount {
   id           String   @id @default(cuid())
   userId       String   @unique
@@ -30,6 +34,7 @@ model WebAccount {
   @@index([userId])
   @@map("web_accounts")
 }
+
 model EmailAccount {
   id           String   @id @default(cuid())
   userId       String   @unique
@@ -40,9 +45,11 @@ model EmailAccount {
   emailAddress String
   createdAt    DateTime @default(now())
   user         User     @relation(fields: [userId], references: [id])
+
   @@unique([userId, provider])
   @@map("email_accounts")
 }
+
 model Expense {
   id         String   @id @default(cuid())
   userId     String
@@ -56,9 +63,11 @@ model Expense {
   occurredAt DateTime @default(now())
   createdAt  DateTime @default(now())
   user       User     @relation(fields: [userId], references: [id])
+
   @@index([userId])
   @@map("expenses")
 }
+
 model Task {
   id        String    @id @default(cuid())
   userId    String
@@ -69,9 +78,11 @@ model Task {
   isDone    Boolean   @default(false)
   createdAt DateTime  @default(now())
   user      User      @relation(fields: [userId], references: [id])
+
   @@index([userId])
   @@map("tasks")
 }
+
 model EmailLog {
   id           String   @id @default(cuid())
   userId       String
@@ -81,9 +92,11 @@ model EmailLog {
   routedTo     String?
   createdAt    DateTime @default(now())
   user         User     @relation(fields: [userId], references: [id])
+
   @@index([userId])
   @@map("email_logs")
 }
+
 model PendingCrossModuleEvent {
   id        String   @id @default(cuid())
   userId    String
@@ -92,9 +105,11 @@ model PendingCrossModuleEvent {
   status    String   @default("pending_module")
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
+
   @@index([userId])
   @@map("pending_cross_module_events")
 }
+
 model NotificationPreference {
   id                 String   @id @default(cuid())
   userId             String   @unique
@@ -105,15 +120,18 @@ model NotificationPreference {
   dailyDigest        Boolean  @default(true)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
-  user User @relation(fields: [userId], references: [id])
+  user               User     @relation(fields: [userId], references: [id])
+
   @@map("notification_preferences")
 }
+
 model TelegramLinkCode {
   code      String    @id @default(cuid())
   userId    String
-  user      User      @relation(fields: [userId], references: [id])
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id])
+
   @@map("telegram_link_codes")
 }
