@@ -1,6 +1,12 @@
-import { createHmac, timingSafeEqual } from "crypto";
+import {
+  createHmac,
+  timingSafeEqual,
+} from "crypto";
 
-import { NextRequest, NextResponse } from "next/server";
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
 
 import { getOrCreateUser } from "@/lib/users";
 import {
@@ -9,8 +15,14 @@ import {
 } from "@/lib/commandRouter";
 import { handleForwardedSms } from "@/lib/handlers/smsForward";
 import { handleReceiptImage } from "@/lib/handlers/receiptOcr";
-import { downloadWhatsAppMedia } from "@/lib/whatsappMedia";
-import { sendWhatsAppMessage } from "@/lib/whatsapp";
+import {
+  downloadWhatsAppMedia,
+} from "@/lib/whatsappMedia";
+import {
+  sendWhatsAppMessage,
+} from "@/lib/whatsapp";
+
+export const dynamic = "force-dynamic";
 
 function verifyWhatsAppSignature(
   rawBody: string,
@@ -27,22 +39,23 @@ function verifyWhatsAppSignature(
     return false;
   }
 
-  const providedSignature =
+  const providedHex =
     signature.slice("sha256=".length);
 
-  const expectedSignature =
-    createHmac(
-      "sha256",
-      appSecret
-    )
+  if (!/^[0-9a-f]{64}$/i.test(providedHex)) {
+    return false;
+  }
+
+  const expectedHex =
+    createHmac("sha256", appSecret)
       .update(rawBody)
       .digest("hex");
 
   const providedBuffer =
-    Buffer.from(providedSignature, "hex");
+    Buffer.from(providedHex, "hex");
 
   const expectedBuffer =
-    Buffer.from(expectedSignature, "hex");
+    Buffer.from(expectedHex, "hex");
 
   if (
     providedBuffer.length !==
@@ -60,22 +73,30 @@ function verifyWhatsAppSignature(
 export async function GET(
   req: NextRequest
 ) {
-  const params =
-    req.nextUrl.searchParams;
-
   const mode =
-    params.get("hub.mode");
+    req.nextUrl.searchParams.get(
+      "hub.mode"
+    );
 
   const token =
-    params.get("hub.verify_token");
+    req.nextUrl.searchParams.get(
+      "hub.verify_token"
+    );
 
   const challenge =
-    params.get("hub.challenge");
+    req.nextUrl.searchParams.get(
+      "hub.challenge"
+    );
+
+  const expectedToken =
+    process.env.WHATSAPP_VERIFY_TOKEN;
 
   if (
     mode === "subscribe" &&
-    token ===
-      process.env.WHATSAPP_VERIFY_TOKEN
+    token &&
+    expectedToken &&
+    token === expectedToken &&
+    challenge
   ) {
     return new NextResponse(
       challenge,
@@ -123,27 +144,122 @@ export async function POST(
       );
     }
 
-    const body =
-      JSON.parse(rawBody);
+    let body: unknown;
 
-    const entry =
-      body?.entry?.[0];
+    try {
+      body = JSON.parse(rawBody);
+    } catch {
+      return NextResponse.json(
+        {
+          status: "invalid_json",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
 
-    const change =
-      entry?.changes?.[0]?.value;
-
-    const message =
-      change?.messages?.[0];
-
-    if (!message) {
+    if (
+      !body ||
+      typeof body !== "object"
+    ) {
       return NextResponse.json({
         status: "ignored",
       });
     }
 
+    const payload =
+      body as Record<string, unknown>;
+
+    const entry =
+      Array.isArray(payload.entry)
+        ? payload.entry[0]
+        : null;
+
+    if (
+      !entry ||
+      typeof entry !== "object"
+    ) {
+      return NextResponse.json({
+        status: "ignored",
+      });
+    }
+
+    const changesValue =
+      (entry as Record<string, unknown>)
+        .changes;
+
+    const changes: unknown[] =
+      Array.isArray(changesValue)
+        ? changesValue
+        : [];
+
+    const change =
+      changes[0];
+
+    if (
+      !change ||
+      typeof change !== "object"
+    ) {
+      return NextResponse.json({
+        status: "ignored",
+      });
+    }
+
+    const changeValue =
+      (change as Record<
+        string,
+        unknown
+      >).value;
+
+    if (
+      !changeValue ||
+      typeof changeValue !== "object"
+    ) {
+      return NextResponse.json({
+        status: "ignored",
+      });
+    }
+
+    const value =
+      changeValue as Record<
+        string,
+        unknown
+      >;
+
+    /*
+     * WhatsApp sends message-status events and
+     * other notifications through the same webhook.
+     * Those are not user messages and should be
+     * acknowledged without attempting to process them.
+     */
+    const messages =
+      Array.isArray(value.messages)
+        ? value.messages
+        : [];
+
+    const message =
+      messages[0];
+
+    if (
+      !message ||
+      typeof message !== "object"
+    ) {
+      return NextResponse.json({
+        status: "ignored",
+      });
+    }
+
+    const incomingMessage =
+      message as Record<
+        string,
+        unknown
+      >;
+
     const from =
-      typeof message.from === "string"
-        ? message.from
+      typeof incomingMessage.from ===
+      "string"
+        ? incomingMessage.from.trim()
         : "";
 
     if (!from) {
@@ -157,22 +273,41 @@ export async function POST(
       );
     }
 
-    if (
-      message.type === "image"
-    ) {
+    const messageType =
+      typeof incomingMessage.type ===
+      "string"
+        ? incomingMessage.type
+        : "";
+
+    if (messageType === "image") {
       const user =
         await getOrCreateUser(
           "whatsapp",
           from
         );
 
+      const image =
+        incomingMessage.image;
+
+      const imagePayload =
+        image &&
+        typeof image === "object"
+          ? image as Record<
+              string,
+              unknown
+            >
+          : null;
+
       const mediaId =
-        message.image?.id;
+        typeof imagePayload?.id ===
+        "string"
+          ? imagePayload.id.trim()
+          : "";
 
       if (!mediaId) {
         await sendWhatsAppMessage(
           from,
-          "Couldn't read that image — try sending it again."
+          "Couldn't read that image. Please send the receipt photo again."
         );
 
         return NextResponse.json({
@@ -188,7 +323,7 @@ export async function POST(
       if (!imageBuffer) {
         await sendWhatsAppMessage(
           from,
-          "Couldn't download that image — try sending it again."
+          "I couldn't download that receipt. Please send a clearer or smaller image and try again."
         );
 
         return NextResponse.json({
@@ -212,12 +347,10 @@ export async function POST(
       });
     }
 
-    if (
-      message.type !== "text"
-    ) {
+    if (messageType !== "text") {
       await sendWhatsAppMessage(
         from,
-        "I can only read text and receipt photos right now — voice notes are coming soon."
+        "I can currently read text messages and receipt photos. Voice notes and other media types aren't supported yet."
       );
 
       return NextResponse.json({
@@ -225,13 +358,25 @@ export async function POST(
       });
     }
 
+    const textPayload =
+      incomingMessage.text;
+
+    const textObject =
+      textPayload &&
+      typeof textPayload === "object"
+        ? textPayload as Record<
+            string,
+            unknown
+          >
+        : null;
+
     const text =
-      typeof message.text?.body ===
+      typeof textObject?.body ===
       "string"
-        ? message.text.body
+        ? textObject.body.trim()
         : "";
 
-    if (!text.trim()) {
+    if (!text) {
       return NextResponse.json({
         status: "empty_message",
       });
@@ -246,15 +391,16 @@ export async function POST(
     const parsed =
       parseCommand(text);
 
-    const reply = parsed
-      ? await routeCommand(
-          user.id,
-          parsed
-        )
-      : await handleForwardedSms(
-          user.id,
-          text
-        );
+    const reply =
+      parsed
+        ? await routeCommand(
+            user.id,
+            parsed
+          )
+        : await handleForwardedSms(
+            user.id,
+            text
+          );
 
     await sendWhatsAppMessage(
       from,
@@ -264,10 +410,10 @@ export async function POST(
     return NextResponse.json({
       status: "ok",
     });
-  } catch (err) {
+  } catch (error) {
     console.error(
       "[whatsapp webhook] Error handling message:",
-      err
+      error
     );
 
     return NextResponse.json(

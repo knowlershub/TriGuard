@@ -3,6 +3,8 @@ import {
   NextResponse,
 } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 import {
   exchangeCodeForTokens,
   fetchGmailAddress,
@@ -133,11 +135,11 @@ export async function GET(
       },
     });
 
-    return new NextResponse(
-      `Gmail connected: ${emailAddress}. You can close this tab and return to TriGuard.`,
-      {
-        status: 200,
-      }
+    return NextResponse.redirect(
+      new URL(
+        "/dashboard/settings?gmail=connected",
+        req.url
+      )
     );
   } catch (error) {
     console.error(

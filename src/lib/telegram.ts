@@ -12,10 +12,9 @@ export async function sendTelegramMessage(
     process.env.TELEGRAM_BOT_TOKEN;
 
   if (!token) {
-    console.error(
-      "[telegram] Missing TELEGRAM_BOT_TOKEN — cannot send reply."
+    throw new Error(
+      "TELEGRAM_BOT_TOKEN is not configured."
     );
-    return;
   }
 
   const res = await fetch(
@@ -39,8 +38,8 @@ export async function sendTelegramMessage(
         () => ""
       );
 
-    console.error(
-      `[telegram] Failed to send message (${res.status}): ${body}`
+    throw new Error(
+      `Telegram sendMessage failed (${res.status}): ${body}`
     );
   }
 }
