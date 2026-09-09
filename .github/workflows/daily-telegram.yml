@@ -31,8 +31,11 @@ jobs:
             exit 1
           fi
 
-          curl --fail-with-body --silent --show-error \
+          response="$(curl --fail-with-body --silent --show-error \
             --request POST \
             --header "Authorization: Bearer $CRON_SECRET" \
             --header "Content-Type: application/json" \
-            "${APP_BASE_URL%/}/api/notifications/daily"
+            "${APP_BASE_URL%/}/api/notifications/daily")"
+
+          echo "TriGuard daily notification response:"
+          echo "$response"
