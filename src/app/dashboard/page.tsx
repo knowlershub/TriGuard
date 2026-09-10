@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import Sidebar from "@/components/layout/Sidebar";
 import MobileNav from "@/components/layout/MobileNav";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import InstallAppButton from "@/components/pwa/InstallAppButton";
 
 import {
   getDashboardData,
@@ -106,7 +107,7 @@ export default function DashboardPage() {
               <>
                 {/* Early access notice */}
                 <div className="mb-6 rounded-2xl border border-blue-200 bg-blue-50 px-5 py-4">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="text-sm font-semibold text-blue-950">
                         TriGuard Early Access
@@ -119,9 +120,13 @@ export default function DashboardPage() {
                       </p>
                     </div>
 
-                    <span className="w-fit rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-blue-700">
-                      Early access
-                    </span>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <InstallAppButton />
+
+                      <span className="w-fit rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-blue-700">
+                        Early access
+                      </span>
+                    </div>
                   </div>
                 </div>
 
