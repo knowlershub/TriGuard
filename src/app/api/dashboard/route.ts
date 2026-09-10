@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
      * breaking the existing test/Claude workflow.
      */
     const testUserId = req.nextUrl.searchParams.get("testUserId");
-    const resolved = await resolveApiUser(testUserId);
+    const resolved = await resolveApiUser();
 
     if (resolved.status !== 200) {
       return NextResponse.json(
