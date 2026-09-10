@@ -7,7 +7,12 @@ export const metadata: Metadata = {
   description:
     "Your personal money, time, and information guard.",
   icons: {
-    icon: "/icon.svg",
+    icon: [
+      {
+        url: "/icon.svg",
+        type: "image/svg+xml",
+      },
+    ],
     shortcut: "/icon.svg",
     apple: "/icons/icon-180.png",
   },
