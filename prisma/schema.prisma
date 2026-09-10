@@ -18,8 +18,6 @@ model User {
   expenses               Expense[]
   notificationPreference NotificationPreference?
   pendingEvents          PendingCrossModuleEvent[]
-  tailrideInvoices       TailrideInvoice[]
-  tailrideConnection     TailrideConnection?
   tasks                  Task[]
   telegramLinkCodes      TelegramLinkCode[]
 
@@ -137,37 +135,4 @@ model TelegramLinkCode {
   user      User      @relation(fields: [userId], references: [id])
 
   @@map("telegram_link_codes")
-}
-
-model TailrideInvoice {
-  id           String    @id @default(cuid())
-  tailrideId   String    @unique
-  event        String
-  documentType String?
-  amount       String?
-  currency     String?
-  merchant     String?
-  occurredAt   DateTime?
-  status       String    @default("received")
-  payload      Json
-  userId       String?
-  user         User?     @relation(fields: [userId], references: [id])
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-
-  @@index([userId])
-  @@index([status])
-  @@map("tailride_invoices")
-}
-
-model TailrideConnection {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  intakeTag String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("tailride_connections")
 }

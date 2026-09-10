@@ -1,27 +1,39 @@
-import { NextRequest, NextResponse } from "next/server";
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
 
-import { extractTextFromImage as extractWithGoogleVision } from "@/lib/ocr/googleVision";
-import { extractTextFromImage as extractWithTesseract } from "@/lib/ocr/tesseractOcr";
-import { parseReceiptText } from "@/lib/parsers/receiptParser";
+import { resolveApiUser } from "@/lib/apiAuth";
+import {
+  extractTextFromImage,
+} from "@/lib/ocr/tesseractOcr";
+import {
+  parseReceiptText,
+} from "@/lib/parsers/receiptParser";
 
 export const dynamic = "force-dynamic";
+
+const MAX_FILE_SIZE =
+  10 * 1024 * 1024;
 
 export async function POST(
   req: NextRequest
 ) {
-  if (
-    process.env.NODE_ENV ===
-    "production"
-  ) {
-    return new NextResponse(
-      "Not Found",
-      {
-        status: 404,
-      }
-    );
-  }
-
   try {
+    const resolved =
+      await resolveApiUser();
+
+    if (resolved.status !== 200) {
+      return NextResponse.json(
+        {
+          error: resolved.error,
+        },
+        {
+          status: resolved.status,
+        }
+      );
+    }
+
     const formData =
       await req.formData().catch(
         () => null
@@ -46,9 +58,7 @@ export async function POST(
     }
 
     if (
-      !file.type.startsWith(
-        "image/"
-      )
+      !file.type.startsWith("image/")
     ) {
       return NextResponse.json(
         {
@@ -61,16 +71,14 @@ export async function POST(
       );
     }
 
-    const maxFileSize =
-      10 * 1024 * 1024;
-
     if (
-      file.size > maxFileSize
+      file.size <= 0 ||
+      file.size > MAX_FILE_SIZE
     ) {
       return NextResponse.json(
         {
           error:
-            "Image must be 10MB or smaller.",
+            "Image must be between 1 byte and 10MB.",
         },
         {
           status: 400,
@@ -78,45 +86,15 @@ export async function POST(
       );
     }
 
-    const arrayBuffer =
-      await file.arrayBuffer();
-
     const imageBuffer =
-      Buffer.from(arrayBuffer);
+      Buffer.from(
+        await file.arrayBuffer()
+      );
 
-    let rawText:
-      | string
-      | null = null;
-
-    let provider:
-      | "google_vision"
-      | "tesseract" =
-      "tesseract";
-
-    if (
-      process.env
-        .GOOGLE_VISION_API_KEY
-    ) {
-      rawText =
-        await extractWithGoogleVision(
-          imageBuffer
-        );
-
-      if (rawText) {
-        provider =
-          "google_vision";
-      }
-    }
-
-    if (!rawText) {
-      rawText =
-        await extractWithTesseract(
-          imageBuffer
-        );
-
-      provider =
-        "tesseract";
-    }
+    const rawText =
+      await extractTextFromImage(
+        imageBuffer
+      );
 
     if (!rawText) {
       return NextResponse.json(
@@ -131,18 +109,16 @@ export async function POST(
     }
 
     const parsed =
-      parseReceiptText(
-        rawText
-      );
+      parseReceiptText(rawText);
 
     return NextResponse.json({
       rawText,
       parsed,
-      provider,
+      provider: "tesseract",
     });
   } catch (error) {
     console.error(
-      "[ocr] OCR request failed:",
+      "[receipt ocr] OCR request failed:",
       error
     );
 

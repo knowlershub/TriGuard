@@ -150,7 +150,7 @@ export default function ReceiptScanner({
 
       formData.append("image", file);
 
-      const response = await fetch("/api/test/ocr", {
+      const response = await fetch("/api/expenses/ocr", {
         method: "POST",
         body: formData,
       });
