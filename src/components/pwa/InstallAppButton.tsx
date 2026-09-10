@@ -37,15 +37,31 @@ export default function InstallAppButton() {
   const [installed, setInstalled] =
     useState(false);
 
+  const [showHelp, setShowHelp] =
+    useState(false);
+
   const [isIos, setIsIos] =
     useState(false);
 
-  const [showIosHelp, setShowIosHelp] =
-    useState(false);
+  const [browserName, setBrowserName] =
+    useState("your browser");
 
   useEffect(() => {
     setIsIos(isIosDevice());
     setInstalled(isStandaloneMode());
+
+    const userAgent =
+      window.navigator.userAgent;
+
+    if (/edg/i.test(userAgent)) {
+      setBrowserName("Edge");
+    } else if (/chrome|chromium/i.test(userAgent)) {
+      setBrowserName("Chrome");
+    } else if (/firefox/i.test(userAgent)) {
+      setBrowserName("Firefox");
+    } else if (/safari/i.test(userAgent)) {
+      setBrowserName("Safari");
+    }
 
     function handleBeforeInstallPrompt(
       event: Event
@@ -60,6 +76,7 @@ export default function InstallAppButton() {
     function handleAppInstalled() {
       setInstalled(true);
       setInstallPrompt(null);
+      setShowHelp(false);
     }
 
     window.addEventListener(
@@ -86,25 +103,33 @@ export default function InstallAppButton() {
   }, []);
 
   async function handleInstall() {
-    if (isIos) {
-      setShowIosHelp(true);
+    if (installed) {
       return;
     }
 
-    if (!installPrompt) {
+    if (installPrompt) {
+      try {
+        await installPrompt.prompt();
+
+        const choice =
+          await installPrompt.userChoice;
+
+        if (choice.outcome === "accepted") {
+          setInstalled(true);
+        }
+      } catch (error) {
+        console.error(
+          "[pwa] Install prompt error:",
+          error
+        );
+      } finally {
+        setInstallPrompt(null);
+      }
+
       return;
     }
 
-    await installPrompt.prompt();
-
-    const choice =
-      await installPrompt.userChoice;
-
-    if (choice.outcome === "accepted") {
-      setInstalled(true);
-    }
-
-    setInstallPrompt(null);
+    setShowHelp(true);
   }
 
   if (installed) {
@@ -121,40 +146,33 @@ export default function InstallAppButton() {
         Install TriGuard
       </button>
 
-      {!isIos && !installPrompt && (
-        <p className="mt-2 text-xs text-slate-500">
-          Use your browser&apos;s install option to add
-          TriGuard to your home screen.
-        </p>
-      )}
-
-      {showIosHelp && (
+      {showHelp && (
         <div
           className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/50 p-4 sm:items-center"
           role="dialog"
           aria-modal="true"
-          aria-labelledby="ios-install-title"
+          aria-labelledby="install-title"
         >
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2
-                  id="ios-install-title"
+                  id="install-title"
                   className="text-lg font-bold text-slate-950"
                 >
                   Install TriGuard
                 </h2>
 
                 <p className="mt-1 text-sm text-slate-500">
-                  Add TriGuard to your iPhone or iPad
-                  home screen.
+                  Add TriGuard to your phone or computer
+                  for faster access.
                 </p>
               </div>
 
               <button
                 type="button"
                 onClick={() =>
-                  setShowIosHelp(false)
+                  setShowHelp(false)
                 }
                 className="rounded-lg px-2 py-1 text-lg text-slate-500 hover:bg-slate-100"
                 aria-label="Close"
@@ -163,44 +181,77 @@ export default function InstallAppButton() {
               </button>
             </div>
 
-            <div className="mt-5 space-y-4 text-sm text-slate-700">
-              <div className="rounded-xl bg-slate-50 p-4">
-                <p className="font-semibold text-slate-900">
-                  1. Open the Share menu
-                </p>
+            {isIos ? (
+              <div className="mt-5 space-y-4 text-sm text-slate-700">
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="font-semibold text-slate-900">
+                    1. Open the Share menu
+                  </p>
 
-                <p className="mt-1">
-                  Tap the Share button in your browser.
-                </p>
+                  <p className="mt-1">
+                    Tap the Share button in Safari.
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="font-semibold text-slate-900">
+                    2. Choose Add to Home Screen
+                  </p>
+
+                  <p className="mt-1">
+                    Scroll through the Share options and
+                    select &quot;Add to Home Screen.&quot;
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="font-semibold text-slate-900">
+                    3. Tap Add
+                  </p>
+
+                  <p className="mt-1">
+                    TriGuard will appear on your home
+                    screen like an app.
+                  </p>
+                </div>
               </div>
+            ) : (
+              <div className="mt-5 space-y-4 text-sm text-slate-700">
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="font-semibold text-slate-900">
+                    Your browser hasn't provided the
+                    automatic install prompt yet.
+                  </p>
 
-              <div className="rounded-xl bg-slate-50 p-4">
-                <p className="font-semibold text-slate-900">
-                  2. Choose Add to Home Screen
-                </p>
+                  <p className="mt-1">
+                    Open the {browserName} browser menu
+                    and look for &quot;Install TriGuard&quot;,
+                    &quot;Install app&quot;, or
+                    &quot;Add to Home screen.&quot;
+                  </p>
+                </div>
 
-                <p className="mt-1">
-                  Scroll through the Share options and
-                  select &quot;Add to Home Screen.&quot;
-                </p>
+                <div className="rounded-xl bg-blue-50 p-4">
+                  <p className="font-semibold text-blue-950">
+                    Tip
+                  </p>
+
+                  <p className="mt-1 text-blue-800">
+                    Make sure you are visiting TriGuard
+                    over HTTPS:
+                  </p>
+
+                  <p className="mt-2 break-all font-medium text-blue-900">
+                    https://triguard-mgoo.onrender.com
+                  </p>
+                </div>
               </div>
-
-              <div className="rounded-xl bg-slate-50 p-4">
-                <p className="font-semibold text-slate-900">
-                  3. Tap Add
-                </p>
-
-                <p className="mt-1">
-                  TriGuard will appear on your home
-                  screen like an installed app.
-                </p>
-              </div>
-            </div>
+            )}
 
             <button
               type="button"
               onClick={() =>
-                setShowIosHelp(false)
+                setShowHelp(false)
               }
               className="mt-6 w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800"
             >
