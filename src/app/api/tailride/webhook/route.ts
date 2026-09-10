@@ -440,9 +440,9 @@ export async function POST(
                 userId:
                   connection.userId,
                 amount:
-                  amount,
+                  amount!,
                 currency:
-                  currency,
+                  currency!,
                 category:
                   getTailrideTags(invoice)
                     .filter(
