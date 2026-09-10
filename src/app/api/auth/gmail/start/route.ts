@@ -12,13 +12,8 @@ export async function GET(
   req: NextRequest
 ) {
   try {
-    const testUserId =
-      req.nextUrl.searchParams.get(
-        "userId"
-      );
-
     const resolved =
-      await resolveApiUser(testUserId);
+      await resolveApiUser();
 
     if (resolved.status !== 200) {
       return NextResponse.json(

@@ -1,6 +1,5 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { getOrCreateUser } from "@/lib/users";
 
 export async function resolveAuthenticatedUser() {
   const session = await auth();
@@ -32,33 +31,6 @@ export async function resolveAuthenticatedUser() {
   } as const;
 }
 
-export async function resolveApiUser(
-  testUserId?: string | null
-) {
-  const authenticated =
-    await resolveAuthenticatedUser();
-
-  if (authenticated.status === 200) {
-    return authenticated;
-  }
-
-  if (
-    process.env.NODE_ENV !==
-      "production" &&
-    typeof testUserId === "string" &&
-    testUserId.trim()
-  ) {
-    const user =
-      await getOrCreateUser(
-        "test",
-        testUserId.trim()
-      );
-
-    return {
-      user,
-      status: 200,
-    } as const;
-  }
-
-  return authenticated;
+export async function resolveApiUser() {
+  return resolveAuthenticatedUser();
 }

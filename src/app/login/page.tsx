@@ -7,37 +7,32 @@ import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const router = useRouter();
+
   const {
-  data: session,
-  status: sessionStatus,
-} = useSession();
+    data: session,
+    status: sessionStatus,
+  } = useSession();
 
-  const [email, setEmail] =
-    useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const [password, setPassword] =
-    useState("");
+  useEffect(() => {
+    if (sessionStatus === "authenticated") {
+      router.replace("/dashboard");
+    }
+  }, [sessionStatus, router]);
 
-  const [error, setError] =
-    useState<string | null>(null);
-
-  const [loading, setLoading] =
-    useState(false);
-    useEffect(() => {
-  if (sessionStatus === "authenticated") {
-    router.replace("/dashboard");
+  if (sessionStatus === "loading") {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+        <div className="text-sm font-medium text-slate-500">
+          Checking your session...
+        </div>
+      </main>
+    );
   }
-}, [sessionStatus, router]);
-
-if (sessionStatus === "loading") {
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
-      <div className="text-sm font-medium text-slate-500">
-        Checking your session...
-      </div>
-    </main>
-  );
-}
 
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>
@@ -58,9 +53,25 @@ if (sessionStatus === "loading") {
       );
 
       if (!result?.ok) {
-        setError(
-          "Invalid email or password."
-        );
+        const errorCode =
+          "code" in (result ?? {})
+            ? result?.code
+            : undefined;
+
+        if (errorCode === "email_not_found") {
+          setError("Mail doesn't exist.");
+        } else if (
+          errorCode === "wrong_password"
+        ) {
+          setError("Wrong password.");
+        } else if (
+          errorCode === "user_not_found"
+        ) {
+          setError("User account doesn't exist.");
+        } else {
+          setError("Invalid email or password.");
+        }
+
         return;
       }
 
@@ -108,7 +119,11 @@ if (sessionStatus === "loading") {
         </div>
 
         {error && (
-          <div className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          <div
+            role="alert"
+            aria-live="polite"
+            className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700"
+          >
             {error}
           </div>
         )}
@@ -132,9 +147,7 @@ if (sessionStatus === "loading") {
               required
               value={email}
               onChange={(event) =>
-                setEmail(
-                  event.target.value
-                )
+                setEmail(event.target.value)
               }
               className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               placeholder="you@example.com"
@@ -156,9 +169,7 @@ if (sessionStatus === "loading") {
               required
               value={password}
               onChange={(event) =>
-                setPassword(
-                  event.target.value
-                )
+                setPassword(event.target.value)
               }
               className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               placeholder="••••••••"

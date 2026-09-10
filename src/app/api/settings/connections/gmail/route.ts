@@ -9,16 +9,8 @@ export async function GET(
   req: NextRequest
 ) {
   try {
-    const testUserId =
-      process.env.NODE_ENV !==
-      "production"
-        ? req.nextUrl.searchParams.get(
-            "testUserId"
-          )
-        : null;
-
     const resolved =
-      await resolveApiUser(testUserId);
+      await resolveApiUser();
 
     if (resolved.status !== 200) {
       return NextResponse.json(

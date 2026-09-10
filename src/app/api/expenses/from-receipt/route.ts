@@ -221,11 +221,7 @@ export async function POST(req: NextRequest) {
     }
 
     const resolved =
-      await resolveApiUser(
-        testUserId
-          ? String(testUserId)
-          : null
-      );
+      await resolveApiUser();
 
     if (resolved.status !== 200) {
       return NextResponse.json(

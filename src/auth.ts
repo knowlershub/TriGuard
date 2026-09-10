@@ -1,9 +1,25 @@
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 
 import authConfig from "@/auth.config";
 import { prisma } from "@/lib/prisma";
+
+class EmailNotFoundError extends CredentialsSignin {
+  code = "email_not_found";
+}
+
+class WrongPasswordError extends CredentialsSignin {
+  code = "wrong_password";
+}
+
+class InvalidCredentialsError extends CredentialsSignin {
+  code = "invalid_credentials";
+}
+
+class UserNotFoundError extends CredentialsSignin {
+  code = "user_not_found";
+}
 
 export const {
   handlers,
@@ -42,7 +58,7 @@ export const {
         );
 
         if (!email || !password) {
-          return null;
+          throw new InvalidCredentialsError();
         }
 
         const account =
@@ -51,7 +67,7 @@ export const {
           });
 
         if (!account) {
-          return null;
+          throw new EmailNotFoundError();
         }
 
         const passwordMatches =
@@ -61,7 +77,7 @@ export const {
           );
 
         if (!passwordMatches) {
-          return null;
+          throw new WrongPasswordError();
         }
 
         const user =
@@ -72,7 +88,7 @@ export const {
           });
 
         if (!user) {
-          return null;
+          throw new UserNotFoundError();
         }
 
         return {

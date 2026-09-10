@@ -38,13 +38,8 @@ export async function GET(
   req: NextRequest
 ) {
   try {
-    const testUserId =
-      req.nextUrl.searchParams.get(
-        "testUserId"
-      );
-
     const resolved =
-      await resolveApiUser(testUserId);
+      await resolveApiUser();
 
     if (resolved.status !== 200) {
       return NextResponse.json(
@@ -117,11 +112,7 @@ export async function PATCH(
     }
 
     const resolved =
-      await resolveApiUser(
-        body?.testUserId
-          ? String(body.testUserId)
-          : null
-      );
+      await resolveApiUser();
 
     if (resolved.status !== 200) {
       return NextResponse.json(

@@ -74,11 +74,7 @@ export async function PATCH(
     }
 
     const resolved =
-      await resolveApiUser(
-        testUserId
-          ? String(testUserId)
-          : null
-      );
+      await resolveApiUser();
 
     if (resolved.status !== 200) {
       return NextResponse.json(

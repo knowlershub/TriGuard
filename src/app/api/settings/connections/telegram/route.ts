@@ -8,12 +8,8 @@ export async function GET(
   req: NextRequest
 ) {
   try {
-    const testUserId =
-      req.nextUrl.searchParams.get(
-        "testUserId"
-      );
     const resolved =
-      await resolveApiUser(testUserId);
+      await resolveApiUser();
     if (resolved.status !== 200) {
       return NextResponse.json(
         {
@@ -59,8 +55,7 @@ export async function GET(
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    const testUserId = body?.testUserId ?? req.nextUrl.searchParams.get("testUserId");
-    const resolved = await resolveApiUser(testUserId);
+    const resolved = await resolveApiUser();
 
     if (resolved.status !== 200) {
       return NextResponse.json(
@@ -103,11 +98,8 @@ export async function POST(req: NextRequest) {
 }
 export async function DELETE(req: NextRequest) {
   try {
-    const testUserId =
-      req.nextUrl.searchParams.get("testUserId");
-
     const resolved =
-      await resolveApiUser(testUserId);
+      await resolveApiUser();
 
     if (resolved.status !== 200) {
       return NextResponse.json(
