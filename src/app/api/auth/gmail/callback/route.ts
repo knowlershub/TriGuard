@@ -138,7 +138,7 @@ export async function GET(
     return NextResponse.redirect(
       new URL(
         "/dashboard/settings?gmail=connected",
-        process.env.APP_BASE_URL ?? "https://triguard-mgoo.onrender.com"
+        process.env.APP_BASE_URL ?? "https://minderra.onrender.com"
       )
     );
   } catch (error) {

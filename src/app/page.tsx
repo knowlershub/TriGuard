@@ -5,7 +5,8 @@ export default function HomePage() {
     <main
       style={{
         minHeight: "100vh",
-        background: "#f8fafc",
+        background:
+          "radial-gradient(circle at 15% 10%, rgba(37, 99, 235, 0.10), transparent 28%), radial-gradient(circle at 85% 5%, rgba(59, 130, 246, 0.08), transparent 24%), linear-gradient(180deg, #eef4ff 0%, #f8fafc 48%, #ffffff 100%)",
         color: "#0f172a",
         padding: "48px 24px",
       }}

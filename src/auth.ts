@@ -1,5 +1,6 @@
 import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 
 import authConfig from "@/auth.config";
@@ -21,6 +22,112 @@ class UserNotFoundError extends CredentialsSignin {
   code = "user_not_found";
 }
 
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
+async function findOrCreateOAuthUser({
+  email,
+  name,
+  provider,
+  providerAccountId,
+}: {
+  email: string;
+  name: string | null | undefined;
+  provider: string;
+  providerAccountId: string;
+}) {
+  const normalizedEmail = normalizeEmail(email);
+
+  const existingOAuthAccount =
+    await prisma.oAuthAccount.findUnique({
+      where: {
+        provider_providerAccountId: {
+          provider,
+          providerAccountId,
+        },
+      },
+      include: {
+        user: true,
+      },
+    });
+
+  if (existingOAuthAccount) {
+    const displayName = name?.trim();
+
+    if (
+      displayName &&
+      displayName !== existingOAuthAccount.user.displayName
+    ) {
+      return prisma.user.update({
+        where: {
+          id: existingOAuthAccount.userId,
+        },
+        data: {
+          displayName,
+        },
+      });
+    }
+
+    return existingOAuthAccount.user;
+  }
+
+  const existingWebAccount =
+    await prisma.webAccount.findUnique({
+      where: {
+        email: normalizedEmail,
+      },
+    });
+
+  let user = existingWebAccount
+    ? await prisma.user.findUnique({
+        where: {
+          id: existingWebAccount.userId,
+        },
+      })
+    : null;
+
+  if (!user) {
+    user = await prisma.user.create({
+      data: {
+        displayName:
+          name?.trim() ||
+          normalizedEmail.split("@")[0],
+      },
+    });
+
+    await prisma.webAccount.create({
+      data: {
+        userId: user.id,
+        email: normalizedEmail,
+        passwordHash: null,
+      },
+    });
+  } else if (
+    name?.trim() &&
+    user.displayName !== name.trim()
+  ) {
+    user = await prisma.user.update({
+      where: {
+        id: user.id,
+      },
+      data: {
+        displayName: name.trim(),
+      },
+    });
+  }
+
+  await prisma.oAuthAccount.create({
+    data: {
+      userId: user.id,
+      provider,
+      providerAccountId,
+    },
+  });
+
+  return user;
+}
+
 export const {
   handlers,
   signIn,
@@ -34,6 +141,15 @@ export const {
   },
 
   providers: [
+    Google({
+      clientId:
+        process.env.AUTH_GOOGLE_ID ??
+        process.env.GOOGLE_CLIENT_ID ??
+        "",
+      clientSecret:
+        process.env.AUTH_GOOGLE_SECRET ?? "",
+    }),
+
     Credentials({
       credentials: {
         email: {
@@ -47,11 +163,9 @@ export const {
       },
 
       async authorize(credentials) {
-        const email = String(
-          credentials?.email ?? ""
-        )
-          .trim()
-          .toLowerCase();
+        const email = normalizeEmail(
+          String(credentials?.email ?? "")
+        );
 
         const password = String(
           credentials?.password ?? ""
@@ -63,11 +177,17 @@ export const {
 
         const account =
           await prisma.webAccount.findUnique({
-            where: { email },
+            where: {
+              email,
+            },
           });
 
         if (!account) {
           throw new EmailNotFoundError();
+        }
+
+        if (!account.passwordHash) {
+          throw new InvalidCredentialsError();
         }
 
         const passwordMatches =
@@ -103,7 +223,41 @@ export const {
   callbacks: {
     ...authConfig.callbacks,
 
-    async jwt({ token, user }) {
+    async signIn({
+      user,
+      account,
+    }) {
+      if (account?.provider !== "google") {
+        return true;
+      }
+
+      if (
+        !user.email ||
+        !account.providerAccountId
+      ) {
+        return false;
+      }
+
+      const dbUser =
+        await findOrCreateOAuthUser({
+          email: user.email,
+          name: user.name,
+          provider: account.provider,
+          providerAccountId:
+            account.providerAccountId,
+        });
+
+      user.id = dbUser.id;
+      user.name = dbUser.displayName;
+      user.email = normalizeEmail(user.email);
+
+      return true;
+    },
+
+    async jwt({
+      token,
+      user,
+    }) {
       if (user?.id) {
         token.userId = user.id;
       }
@@ -111,8 +265,14 @@ export const {
       return token;
     },
 
-    async session({ session, token }) {
-      if (session.user && token.userId) {
+    async session({
+      session,
+      token,
+    }) {
+      if (
+        session.user &&
+        token.userId
+      ) {
         session.user.id = String(
           token.userId
         );
