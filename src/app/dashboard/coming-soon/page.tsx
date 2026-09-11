@@ -17,7 +17,7 @@ export default function ComingSoonPage() {
             <div className="w-full">
               <div className="mb-8 text-center">
                 <p className="text-sm font-medium text-slate-500">
-                  TriGuard Early Access
+                  Minderra Early Access
                 </p>
 
                 <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
@@ -25,7 +25,7 @@ export default function ComingSoonPage() {
                 </h1>
 
                 <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-500">
-                  We&apos;re building this part of TriGuard carefully
+                  We&apos;re building this part of Minderra carefully
                   so it works well when it arrives.
                 </p>
               </div>

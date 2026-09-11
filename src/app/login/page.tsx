@@ -100,7 +100,7 @@ export default function LoginPage() {
 
             <div>
               <div className="font-bold text-slate-950">
-                TriGuard
+                Minderra
               </div>
 
               <div className="text-xs text-slate-500">
@@ -114,7 +114,7 @@ export default function LoginPage() {
           </h1>
 
           <p className="mt-2 text-sm text-slate-500">
-            Sign in to your personal TriGuard account.
+            Sign in to your personal Minderra account.
           </p>
         </div>
 
@@ -188,7 +188,7 @@ export default function LoginPage() {
         </form>
 
         <p className="mt-6 text-center text-sm text-slate-500">
-          New to TriGuard?{" "}
+          New to Minderra?{" "}
           <Link
             href="/signup"
             className="font-semibold text-blue-600 hover:text-blue-700"

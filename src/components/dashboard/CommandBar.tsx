@@ -35,7 +35,7 @@ export default function CommandBar({
     const trimmed = command.trim();
 
     if (!trimmed) {
-      setError("Enter a TriGuard command.");
+      setError("Enter a Minderra command.");
       return;
     }
 
@@ -72,7 +72,7 @@ export default function CommandBar({
 
         <div>
           <h2 className="font-semibold text-slate-950">
-            Talk to TriGuard
+            Talk to Minderra
           </h2>
 
           <p className="mt-1 text-sm text-slate-500">

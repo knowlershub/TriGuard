@@ -25,7 +25,7 @@ export default function ProfilePage() {
 const freshData = await getDashboardData();
     setData(freshData);
     setDisplayName(
-      freshData.user.displayName?.trim() || "TriGuard User"
+      freshData.user.displayName?.trim() || "Minderra User"
     );
   }
 
@@ -90,7 +90,7 @@ const freshData = await getDashboardData();
 
   function cancelEdit() {
     setDisplayName(
-      data?.user.displayName?.trim() || "TriGuard User"
+      data?.user.displayName?.trim() || "Minderra User"
     );
 
     setEditing(false);
@@ -98,7 +98,7 @@ const freshData = await getDashboardData();
   }
 
   const currentName =
-    data?.user.displayName?.trim() || "TriGuard User";
+    data?.user.displayName?.trim() || "Minderra User";
 
   const initials =
     currentName
@@ -125,7 +125,7 @@ const freshData = await getDashboardData();
               </h1>
 
               <p className="mt-2 text-sm text-slate-500">
-                Your TriGuard identity and account information.
+                Your Minderra identity and account information.
               </p>
             </header>
 
@@ -191,7 +191,7 @@ const freshData = await getDashboardData();
                             </p>
 
                             <p className="mt-1 text-sm text-slate-500">
-                              TriGuard account
+                              Minderra account
                             </p>
                           </>
                         )}
@@ -256,7 +256,7 @@ const freshData = await getDashboardData();
                     </h2>
 
                     <p className="mt-1 text-sm text-slate-500">
-                      Information currently associated with your TriGuard
+                      Information currently associated with your Minderra
                       user.
                     </p>
                   </div>
@@ -275,7 +275,7 @@ const freshData = await getDashboardData();
 
                     <ProfileRow
                       label="WhatsApp connection"
-                      value="Managed through TriGuard backend"
+                      value="Managed through Minderra backend"
                     />
 
                     <ProfileRow

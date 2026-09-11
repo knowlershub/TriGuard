@@ -10,7 +10,7 @@ export default function ProfileError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("[TriGuard] Profile error:", error);
+    console.error("[Minderra] Profile error:", error);
   }, [error]);
 
   return (

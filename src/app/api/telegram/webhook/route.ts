@@ -29,7 +29,7 @@ async function handleTelegramStart(
   if (!code) {
     await sendTelegramMessage(
       chatId,
-      "Welcome to TriGuard. To connect this Telegram account, use the Connect Telegram button in your TriGuard Settings."
+      "Welcome to Minderra. To connect this Telegram account, use the Connect Telegram button in your Minderra Settings."
     );
 
     return true;
@@ -50,7 +50,7 @@ async function handleTelegramStart(
   if (!linkCode) {
     await sendTelegramMessage(
       chatId,
-      "That TriGuard connection link is invalid. Please generate a new link from Settings."
+      "That Minderra connection link is invalid. Please generate a new link from Settings."
     );
 
     return true;
@@ -59,7 +59,7 @@ async function handleTelegramStart(
   if (linkCode.usedAt) {
     await sendTelegramMessage(
       chatId,
-      "That TriGuard connection link has already been used. Please generate a new link from Settings."
+      "That Minderra connection link has already been used. Please generate a new link from Settings."
     );
 
     return true;
@@ -68,7 +68,7 @@ async function handleTelegramStart(
   if (linkCode.expiresAt.getTime() <= Date.now()) {
     await sendTelegramMessage(
       chatId,
-      "That TriGuard connection link has expired. Please generate a new link from Settings."
+      "That Minderra connection link has expired. Please generate a new link from Settings."
     );
 
     return true;
@@ -109,7 +109,7 @@ async function handleTelegramStart(
     ) {
       await sendTelegramMessage(
         chatId,
-        "That TriGuard connection link is no longer available. Please generate a new link from Settings."
+        "That Minderra connection link is no longer available. Please generate a new link from Settings."
       );
 
       return true;
@@ -121,7 +121,7 @@ async function handleTelegramStart(
     ) {
       await sendTelegramMessage(
         chatId,
-        "This Telegram account is already connected to another TriGuard account."
+        "This Telegram account is already connected to another Minderra account."
       );
 
       return true;
@@ -132,7 +132,7 @@ async function handleTelegramStart(
 
   await sendTelegramMessage(
     chatId,
-    "Telegram connected successfully. You can now send expenses, receipts, and commands to TriGuard here."
+    "Telegram connected successfully. You can now send expenses, receipts, and commands to Minderra here."
   );
 
   return true;

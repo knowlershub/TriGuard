@@ -234,7 +234,7 @@ export default function SettingsPage() {
               </h1>
 
               <p className="mt-2 text-sm text-slate-500">
-                Control how TriGuard behaves and how it keeps you informed.
+                Control how Minderra behaves and how it keeps you informed.
               </p>
             </header>
 
@@ -258,7 +258,7 @@ export default function SettingsPage() {
                     </h2>
 
                     <p className="mt-1 text-sm text-slate-500">
-                      These preferences are stored with your TriGuard account.
+                      These preferences are stored with your Minderra account.
                     </p>
                   </div>
 
@@ -313,7 +313,7 @@ export default function SettingsPage() {
 
                     <SettingToggle
                       title="Daily digest"
-                      description="Prepare a daily TriGuard summary when digest support is connected."
+                      description="Prepare a daily Minderra summary when digest support is connected."
                       checked={settings.dailyDigest}
                       onChange={(value: boolean) =>
                         updateSetting(
@@ -332,7 +332,7 @@ export default function SettingsPage() {
                     </h2>
 
                     <p className="mt-1 text-sm text-slate-500">
-                      Connect the services that feed information into TriGuard.
+                      Connect the services that feed information into Minderra.
                     </p>
                   </div>
 
@@ -379,7 +379,7 @@ export default function SettingsPage() {
                           </p>
 
                           <p className="mt-1 text-sm leading-6 text-slate-500">
-                            Send expenses, tasks, and commands to TriGuard through Telegram.
+                            Send expenses, tasks, and commands to Minderra through Telegram.
                           </p>
                         </div>
 
@@ -421,7 +421,7 @@ export default function SettingsPage() {
                     </h2>
 
                     <p className="mt-1 text-sm text-slate-500">
-                      View and edit your TriGuard profile.
+                      View and edit your Minderra profile.
                     </p>
                   </div>
 

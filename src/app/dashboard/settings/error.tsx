@@ -10,7 +10,7 @@ export default function SettingsError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("[TriGuard] Settings error:", error);
+    console.error("[Minderra] Settings error:", error);
   }, [error]);
 
   return (

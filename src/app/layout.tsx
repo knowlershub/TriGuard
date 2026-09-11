@@ -3,7 +3,7 @@ import "./globals.css";
 import { SessionProvider } from "next-auth/react";
 
 export const metadata: Metadata = {
-  title: "TriGuard",
+  title: "Minderra",
   description:
     "Your personal money, time, and information guard.",
   icons: {
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    title: "TriGuard",
+    title: "Minderra",
     statusBarStyle: "default",
   },
   formatDetection: {

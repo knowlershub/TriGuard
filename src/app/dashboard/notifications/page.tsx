@@ -322,7 +322,7 @@ export default function NotificationsPage() {
                   </h1>
 
                   <p className="mt-2 text-sm text-slate-500">
-                    Everything TriGuard thinks deserves your attention.
+                    Everything Minderra thinks deserves your attention.
                   </p>
                 </div>
 
@@ -425,7 +425,7 @@ export default function NotificationsPage() {
                     </h2>
 
                     <p className="mx-auto mt-1 max-w-md text-sm leading-6 text-emerald-800">
-                      TriGuard has nothing urgent to bring to your attention
+                      Minderra has nothing urgent to bring to your attention
                       based on your current notification settings.
                     </p>
 
@@ -451,7 +451,7 @@ export default function NotificationsPage() {
                             {notifications.length} item
                             {notifications.length === 1
                               ? ""
-                              : "s"} across TriGuard.
+                              : "s"} across Minderra.
                           </p>
                         </div>
 

@@ -143,7 +143,7 @@ export default function InstallAppButton() {
         onClick={handleInstall}
         className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
       >
-        Install TriGuard
+        Install Minderra
       </button>
 
       {showHelp && (
@@ -160,11 +160,11 @@ export default function InstallAppButton() {
                   id="install-title"
                   className="text-lg font-bold text-slate-950"
                 >
-                  Install TriGuard
+                  Install Minderra
                 </h2>
 
                 <p className="mt-1 text-sm text-slate-500">
-                  Add TriGuard to your phone or computer
+                  Add Minderra to your phone or computer
                   for faster access.
                 </p>
               </div>
@@ -210,7 +210,7 @@ export default function InstallAppButton() {
                   </p>
 
                   <p className="mt-1">
-                    TriGuard will appear on your home
+                    Minderra will appear on your home
                     screen like an app.
                   </p>
                 </div>
@@ -225,7 +225,7 @@ export default function InstallAppButton() {
 
                   <p className="mt-1">
                     Open the {browserName} browser menu
-                    and look for &quot;Install TriGuard&quot;,
+                    and look for &quot;Install Minderra&quot;,
                     &quot;Install app&quot;, or
                     &quot;Add to Home screen.&quot;
                   </p>
@@ -237,7 +237,7 @@ export default function InstallAppButton() {
                   </p>
 
                   <p className="mt-1 text-blue-800">
-                    Make sure you are visiting TriGuard
+                    Make sure you are visiting Minderra
                     over HTTPS:
                   </p>
 

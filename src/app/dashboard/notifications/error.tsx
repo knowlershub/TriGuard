@@ -11,7 +11,7 @@ export default function NotificationsError({
 }) {
   useEffect(() => {
     console.error(
-      "[TriGuard] Notifications error:",
+      "[Minderra] Notifications error:",
       error
     );
   }, [error]);

@@ -54,7 +54,7 @@ export async function handleEmailCommand(userId: string): Promise<string> {
       });
       routedTo = "SubManager (pending)";
     } else if (summary.detectedType === "bill") {
-      routedTo = "TriGuard";
+      routedTo = "Minderra";
     }
 
     await prisma.emailLog.create({

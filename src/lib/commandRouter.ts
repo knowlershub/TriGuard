@@ -12,7 +12,7 @@ export type ParsedCommand = {
 };
 
 const HELP_TEXT = `
-🤖 TriGuard Bot — Commands
+🤖 Minderra Bot — Commands
 
 💰 EXPENSES
 
@@ -72,7 +72,7 @@ Example:
 
 You can also send a receipt photo directly to this bot.
 
-TriGuard will:
+Minderra will:
 • Download the receipt
 • Read the receipt using OCR
 • Extract the expense information
@@ -82,10 +82,10 @@ TriGuard will:
 🔗 TELEGRAM CONNECTION
 
 /start
-Start or connect your Telegram account to TriGuard.
+Start or connect your Telegram account to Minderra.
 
 The safest way to connect is:
-TriGuard Settings → Connect Telegram → open the generated Telegram link.
+Minderra Settings → Connect Telegram → open the generated Telegram link.
 
 /id
 Show your Telegram account ID.
@@ -151,6 +151,6 @@ export async function routeCommand(
     default:
       return `Unknown command: /${parsed.command}.
 
-Try /help to see all available TriGuard commands.`;
+Try /help to see all available Minderra commands.`;
   }
 }

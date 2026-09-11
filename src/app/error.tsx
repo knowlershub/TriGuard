@@ -10,7 +10,7 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("[TriGuard] Application error:", error);
+    console.error("[Minderra] Application error:", error);
   }, [error]);
 
   return (
@@ -25,7 +25,7 @@ export default function Error({
         </h1>
 
         <p className="mt-2 text-sm leading-6 text-gray-500">
-          TriGuard ran into an unexpected problem. Please try again.
+          Minderra ran into an unexpected problem. Please try again.
         </p>
 
         <button

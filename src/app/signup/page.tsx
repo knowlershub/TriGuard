@@ -140,7 +140,7 @@ export default function SignupPage() {
 
             <div>
               <div className="font-bold text-slate-950">
-                TriGuard
+                Minderra
               </div>
 
               <div className="text-xs text-slate-500">
@@ -154,7 +154,7 @@ export default function SignupPage() {
           </h1>
 
           <p className="mt-2 text-sm text-slate-500">
-            Start your personal TriGuard early-access account.
+            Start your personal Minderra early-access account.
           </p>
         </div>
 

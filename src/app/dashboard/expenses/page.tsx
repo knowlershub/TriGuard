@@ -49,7 +49,7 @@ export default function ExpensesPage() {
               </h1>
 
               <p className="mt-2 text-sm text-slate-500">
-                Your actual transactions from TriGuard.
+                Your actual transactions from Minderra.
               </p>
             </div>
 
@@ -132,7 +132,7 @@ export default function ExpensesPage() {
                     </h2>
 
                     <p className="mt-1 text-xs text-slate-500">
-                      Your latest transactions from TriGuard.
+                      Your latest transactions from Minderra.
                     </p>
                   </div>
 

@@ -83,7 +83,7 @@ export default function QuickActions({
         </h2>
 
         <p className="mt-1 text-sm text-slate-500">
-          Update TriGuard without leaving the dashboard.
+          Update Minderra without leaving the dashboard.
         </p>
       </div>
 

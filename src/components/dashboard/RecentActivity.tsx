@@ -23,7 +23,7 @@ export default function RecentActivity({
         <div>
           <h2 className="font-semibold text-slate-950">Recent activity</h2>
           <p className="mt-0.5 text-xs text-slate-500">
-            What TriGuard has processed
+            What Minderra has processed
           </p>
         </div>
       </div>

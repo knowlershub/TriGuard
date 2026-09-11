@@ -92,7 +92,7 @@ export default function Sidebar() {
 
           <div>
             <div className="text-lg font-bold tracking-tight">
-              TriGuard
+              Minderra
             </div>
 
             <div className="text-xs text-slate-400">

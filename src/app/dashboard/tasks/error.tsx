@@ -10,7 +10,7 @@ export default function TasksError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("[TriGuard] Tasks error:", error);
+    console.error("[Minderra] Tasks error:", error);
   }, [error]);
 
   return (

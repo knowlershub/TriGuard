@@ -110,12 +110,12 @@ export default function DashboardPage() {
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="text-sm font-semibold text-blue-950">
-                        TriGuard Early Access
+                        Minderra Early Access
                       </p>
 
                       <p className="mt-1 text-sm text-blue-800">
                         You&apos;re using an early version of
-                        TriGuard. Some integrations and account
+                        Minderra. Some integrations and account
                         features are still coming soon.
                       </p>
                     </div>
@@ -249,7 +249,7 @@ export default function DashboardPage() {
                       </h2>
 
                       <p className="mt-1 text-xs text-slate-500">
-                        Things TriGuard thinks may need you.
+                        Things Minderra thinks may need you.
                       </p>
                     </div>
 
@@ -297,7 +297,7 @@ export default function DashboardPage() {
                     </h2>
 
                     <p className="mt-1 text-xs text-slate-500">
-                      The latest activity across TriGuard.
+                      The latest activity across Minderra.
                     </p>
                   </div>
 
@@ -308,7 +308,7 @@ export default function DashboardPage() {
                       </p>
 
                       <p className="mt-1 text-sm text-slate-500">
-                        Activity will appear here as you use TriGuard.
+                        Activity will appear here as you use Minderra.
                       </p>
                     </div>
                   ) : (
@@ -356,7 +356,7 @@ export default function DashboardPage() {
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="font-semibold text-slate-950">
-                        More TriGuard features are coming soon
+                        More Minderra features are coming soon
                       </p>
 
                       <p className="mt-1 text-sm text-slate-500">

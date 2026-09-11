@@ -10,7 +10,7 @@ export default function ExpensesError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("[TriGuard] Expenses error:", error);
+    console.error("[Minderra] Expenses error:", error);
   }, [error]);
 
   return (

@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "TriGuard",
-    short_name: "TriGuard",
+    name: "Minderra",
+    short_name: "Minderra",
     description:
       "Your personal money, time, and information guard.",
     start_url: "/",

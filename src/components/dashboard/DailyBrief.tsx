@@ -18,7 +18,7 @@ export default function DailyBrief({
 
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-            TriGuard Brief
+            Minderra Brief
           </p>
 
           <h2 className="font-semibold">

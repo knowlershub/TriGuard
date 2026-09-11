@@ -10,7 +10,7 @@ export default function InboxError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("[TriGuard] Inbox error:", error);
+    console.error("[Minderra] Inbox error:", error);
   }, [error]);
 
   return (

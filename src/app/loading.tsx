@@ -6,7 +6,7 @@ export default function Loading() {
 
         <div className="text-center">
           <p className="text-sm font-medium text-gray-900">
-            Loading TriGuard
+            Loading Minderra
           </p>
           <p className="mt-1 text-xs text-gray-500">
             Preparing your dashboard...

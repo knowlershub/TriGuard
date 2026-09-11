@@ -67,7 +67,7 @@ function buildSpendingReport(
 
   if (expenses.length === 0) {
     return [
-      "📊 TriGuard Daily Spending Report",
+      "📊 Minderra Daily Spending Report",
       "",
       formattedDate,
       "",
@@ -112,7 +112,7 @@ function buildSpendingReport(
     );
 
   return [
-    "📊 TriGuard Daily Spending Report",
+    "📊 Minderra Daily Spending Report",
     "",
     formattedDate,
     "",
@@ -125,7 +125,7 @@ function buildSpendingReport(
       ? ["", "🏪 Top merchants", ...merchantLines]
       : []),
     "",
-    `Keep an eye on your spending today. — TriGuard`,
+    `Keep an eye on your spending today. — Minderra`,
   ].join("\n");
 }
 

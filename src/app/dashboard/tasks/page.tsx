@@ -226,7 +226,7 @@ export default function TasksPage() {
                 </h1>
 
                 <p className="mt-2 text-sm text-slate-500">
-                  Everything TriGuard has turned into actionable work.
+                  Everything Minderra has turned into actionable work.
                 </p>
               </div>
 
@@ -362,7 +362,7 @@ export default function TasksPage() {
 
                         <p className="mx-auto mt-1 max-w-md text-sm leading-6 text-slate-500">
                           {filter === "all"
-                            ? "You're all caught up. New tasks created through TriGuard will appear here."
+                            ? "You're all caught up. New tasks created through Minderra will appear here."
                             : "Try another filter or create a new task through the dashboard command bar."}
                         </p>
                       </div>
@@ -466,7 +466,7 @@ function TaskRow({ task }: { task: DashboardTask }) {
             </div>
 
             <span className="shrink-0 rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-500">
-              {task.source || "TriGuard"}
+              {task.source || "Minderra"}
             </span>
           </div>
         </div>
