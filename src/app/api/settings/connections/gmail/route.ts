@@ -2,11 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
 import { resolveApiUser } from "@/lib/apiAuth";
+import { refreshAccessToken } from "@/lib/googleOAuth";
 
 export const dynamic = "force-dynamic";
 
+const REFRESH_BUFFER_MS =
+  60 * 1000;
+
 export async function GET(
-  req: NextRequest
+  _req: NextRequest
 ) {
   try {
     const resolved =
@@ -26,13 +30,14 @@ export async function GET(
     const account =
       await prisma.emailAccount.findFirst({
         where: {
-          userId:
-            resolved.user.id,
+          userId: resolved.user.id,
           provider: "gmail",
         },
         select: {
           emailAddress: true,
           provider: true,
+          accessToken: true,
+          refreshToken: true,
           expiresAt: true,
         },
       });
@@ -47,18 +52,85 @@ export async function GET(
       });
     }
 
-    const expired =
-      account.expiresAt.getTime() <=
+    const now =
       Date.now();
 
+    const expiresAt =
+      account.expiresAt.getTime();
+
+    const needsRefresh =
+      expiresAt <=
+      now + REFRESH_BUFFER_MS;
+
+    if (!needsRefresh) {
+      return NextResponse.json({
+        connected: true,
+        emailAddress:
+          account.emailAddress,
+        provider:
+          account.provider,
+        expired: false,
+        needsReauth: false,
+      });
+    }
+
+    if (!account.refreshToken) {
+      return NextResponse.json({
+        connected: false,
+        emailAddress:
+          account.emailAddress,
+        provider:
+          account.provider,
+        expired: true,
+        needsReauth: true,
+      });
+    }
+
+    const refreshed =
+      await refreshAccessToken(
+        account.refreshToken
+      );
+
+    if (!refreshed) {
+      console.warn(
+        "[gmail status] Gmail access token could not be refreshed."
+      );
+
+      return NextResponse.json({
+        connected: false,
+        emailAddress:
+          account.emailAddress,
+        provider:
+          account.provider,
+        expired: true,
+        needsReauth: true,
+      });
+    }
+
+    await prisma.emailAccount.update({
+      where: {
+        userId_provider: {
+          userId:
+            resolved.user.id,
+          provider: "gmail",
+        },
+      },
+      data: {
+        accessToken:
+          refreshed.accessToken,
+        expiresAt:
+          refreshed.expiresAt,
+      },
+    });
+
     return NextResponse.json({
-      connected: !expired,
+      connected: true,
       emailAddress:
         account.emailAddress,
       provider:
         account.provider,
-      expired,
-      needsReauth: expired,
+      expired: false,
+      needsReauth: false,
     });
   } catch (error) {
     console.error(
