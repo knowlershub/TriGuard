@@ -21,6 +21,9 @@ model User {
   tasks                  Task[]
   telegramLinkCodes      TelegramLinkCode[]
   oauthAccounts          OAuthAccount[]
+  WhatsAppMessage        WhatsAppMessage[]
+  Wishlist               Wishlist[]
+  pendingReceipts        PendingReceipt[]
 
   @@map("users")
 }
@@ -150,4 +153,57 @@ model TelegramLinkCode {
   user      User      @relation(fields: [userId], references: [id])
 
   @@map("telegram_link_codes")
+}
+
+model WhatsAppMessage {
+  id          String   @id @default(cuid())
+  userId      String
+  messageId   String?  @unique
+  direction   String   @default("inbound")
+  messageType String
+  body        String?
+  mediaId     String?
+  sentAt      DateTime
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, sentAt])
+  @@index([userId, messageType])
+  @@map("whatsapp_messages")
+}
+
+model Wishlist {
+  id             String    @id @default(cuid())
+  userId         String
+  title          String
+  targetAmount   Decimal
+  savedAmount    Decimal   @default(0)
+  currency       String    @default("NGN")
+  priority       String    @default("medium")
+  status         String    @default("active")
+  remindOnLeak   Boolean   @default(true)
+  lastRemindedAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@map("wishlists")
+}
+
+model PendingReceipt {
+  id        String   @id @default(cuid())
+  userId    String
+  amount    Decimal
+  currency  String   @default("NGN")
+  merchant  String?
+  rawText   String
+  status    String   @default("pending")
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([userId, createdAt])
+  @@map("pending_receipts")
 }

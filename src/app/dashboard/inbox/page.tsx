@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import Sidebar from "@/components/layout/Sidebar";
 import MobileNav from "@/components/layout/MobileNav";
+import WhatsAppInboxPanel from "@/components/inbox/WhatsAppInboxPanel";
 
 import {
   getDashboardData,
@@ -45,6 +46,9 @@ export default function InboxPage() {
 
   const [emailFilter, setEmailFilter] =
     useState<EmailFilter>("all");
+
+  const [activeTab, setActiveTab] =
+    useState<"inbox" | "whatsapp">("inbox");
 
   async function loadInbox() {
     const [dashboardData, gmailStatus] =
@@ -231,7 +235,7 @@ export default function InboxPage() {
                 </div>
               </div>
 
-              {lastChecked && (
+              {lastChecked && activeTab === "inbox" && (
                 <p className="mt-3 text-xs text-slate-400">
                   Last checked{" "}
                   {lastChecked.toLocaleTimeString("en-NG", {
@@ -242,17 +246,49 @@ export default function InboxPage() {
               )}
             </header>
 
-            {error && (
-              <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
-                {error}
-              </div>
-            )}
+            <div className="mb-6 flex w-fit rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+              <button
+                type="button"
+                onClick={() => setActiveTab("inbox")}
+                aria-pressed={activeTab === "inbox"}
+                className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                  activeTab === "inbox"
+                    ? "bg-slate-950 text-white"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                Inbox
+              </button>
 
-            {message && (
-              <div className="mb-6 whitespace-pre-line rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-700">
-                {message}
-              </div>
-            )}
+              <button
+                type="button"
+                onClick={() => setActiveTab("whatsapp")}
+                aria-pressed={activeTab === "whatsapp"}
+                className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                  activeTab === "whatsapp"
+                    ? "bg-emerald-600 text-white"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                WhatsApp
+              </button>
+            </div>
+
+            {activeTab === "whatsapp" ? (
+              <WhatsAppInboxPanel />
+            ) : (
+              <>
+                {error && (
+                  <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
+                    {error}
+                  </div>
+                )}
+
+                {message && (
+                  <div className="mb-6 whitespace-pre-line rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-700">
+                    {message}
+                  </div>
+                )}
 
             {!data && loading && (
               <div className="space-y-6">
@@ -650,6 +686,8 @@ export default function InboxPage() {
                     </div>
                   )}
                 </section>
+              </>
+            )}
               </>
             )}
           </div>

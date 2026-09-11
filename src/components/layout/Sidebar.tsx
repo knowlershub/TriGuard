@@ -29,6 +29,11 @@ const navigation = [
     icon: "✉",
   },
   {
+    label: "Wishlist",
+    href: "/dashboard/wishlist",
+    icon: "☆",
+  },
+  {
     label: "Notifications",
     href: "/dashboard/notifications",
     icon: "🔔",

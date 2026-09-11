@@ -1,0 +1,33 @@
+name: Minderra Wishlist Reminders
+
+on:
+  schedule:
+    - cron: "17 8 * * *"
+  workflow_dispatch:
+
+jobs:
+  wishlist-reminders:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger Wishlist reminder job
+        env:
+          MINDERRA_URL: https://minderra.onrender.com
+          CRON_SECRET: ${{ secrets.TRIGUARD_CRON_SECRET }}
+        run: |
+          set -euo pipefail
+
+          RESPONSE="$(
+            curl \
+              --fail-with-body \
+              --silent \
+              --show-error \
+              --location \
+              --request POST \
+              --header "Authorization: Bearer ${CRON_SECRET}" \
+              --header "Content-Type: application/json" \
+              "${MINDERRA_URL}/api/notifications/wishlist"
+          )"
+
+          echo "Wishlist reminder response:"
+          echo "${RESPONSE}"

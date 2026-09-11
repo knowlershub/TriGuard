@@ -5,6 +5,7 @@ import { handleEmailCommand } from "@/lib/handlers/email";
 import { handleTasksCommand } from "@/lib/handlers/tasksList";
 import { handleDoneCommand } from "@/lib/handlers/done";
 import { handleExpensesListCommand } from "@/lib/handlers/expensesList";
+import { handleWishlistCommand } from "@/lib/handlers/wishlist";
 
 export type ParsedCommand = {
   command: string;
@@ -28,6 +29,25 @@ View your recent expenses.
 Example:
 /expenses
 
+⭐ WISHLIST
+
+/wishlist add <item> <amount>
+Save something you want to buy.
+
+Example:
+/wishlist add Sony headphones 180000
+
+/wishlist list
+View unfinished wishlist goals.
+
+/wishlist save <item> <amount>
+Add money you've saved toward a goal.
+
+/wishlist done <item>
+Mark a wishlist goal as completed.
+
+/wishlist reminder
+Check whether recent discretionary spending is getting in the way.
 
 ✅ TASKS
 
@@ -141,6 +161,13 @@ export async function routeCommand(
 
     case "expenses":
       return handleExpensesListCommand(userId, parsed.args);
+
+
+    case "wishlist":
+      return handleWishlistCommand(
+        userId,
+        parsed.args
+      );
 
     case "email":
       return handleEmailCommand(userId, parsed.args);

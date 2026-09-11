@@ -8,19 +8,22 @@ import {
   NextResponse,
 } from "next/server";
 
-import { getOrCreateUser } from "@/lib/users";
 import {
   parseCommand,
   routeCommand,
 } from "@/lib/commandRouter";
 import { handleForwardedSms } from "@/lib/handlers/smsForward";
-import { handleReceiptImage } from "@/lib/handlers/receiptOcr";
+import {
+  handlePendingReceiptReply,
+  handleReceiptImage,
+} from "@/lib/handlers/receiptOcr";
 import {
   downloadWhatsAppMedia,
 } from "@/lib/whatsappMedia";
 import {
   sendWhatsAppMessage,
 } from "@/lib/whatsapp";
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -227,12 +230,6 @@ export async function POST(
         unknown
       >;
 
-    /*
-     * WhatsApp sends message-status events and
-     * other notifications through the same webhook.
-     * Those are not user messages and should be
-     * acknowledged without attempting to process them.
-     */
     const messages =
       Array.isArray(value.messages)
         ? value.messages
@@ -273,19 +270,77 @@ export async function POST(
       );
     }
 
+    /*
+     * Only a WhatsApp number that is already
+     * connected to a Minderra user may be
+     * processed as user content.
+     *
+     * This deliberately replaces the previous
+     * getOrCreateUser("whatsapp", from) behavior.
+     */
+    const user =
+      await prisma.user.findUnique({
+        where: {
+          whatsappId: from,
+        },
+        select: {
+          id: true,
+          whatsappId: true,
+        },
+      });
+
+    if (!user) {
+      console.warn(
+        `[whatsapp webhook] Ignoring message from unlinked WhatsApp number: ${from}`
+      );
+
+      return NextResponse.json({
+        status: "unlinked_user",
+      });
+    }
+
     const messageType =
       typeof incomingMessage.type ===
       "string"
         ? incomingMessage.type
         : "";
 
-    if (messageType === "image") {
-      const user =
-        await getOrCreateUser(
-          "whatsapp",
-          from
-        );
+    const messageId =
+      typeof incomingMessage.id ===
+      "string"
+        ? incomingMessage.id.trim()
+        : null;
 
+    const timestampValue =
+      typeof incomingMessage.timestamp ===
+      "string"
+        ? Number(incomingMessage.timestamp)
+        : NaN;
+
+    const sentAt =
+      Number.isFinite(timestampValue)
+        ? new Date(timestampValue * 1000)
+        : new Date();
+
+    if (messageId) {
+      const existing =
+        await prisma.whatsAppMessage.findUnique({
+          where: {
+            messageId,
+          },
+          select: {
+            id: true,
+          },
+        });
+
+      if (existing) {
+        return NextResponse.json({
+          status: "duplicate",
+        });
+      }
+    }
+
+    if (messageType === "image") {
       const image =
         incomingMessage.image;
 
@@ -303,6 +358,25 @@ export async function POST(
         "string"
           ? imagePayload.id.trim()
           : "";
+
+      const caption =
+        typeof imagePayload?.caption ===
+        "string"
+          ? imagePayload.caption.trim()
+          : null;
+
+      await prisma.whatsAppMessage.create({
+        data: {
+          userId: user.id,
+          messageId,
+          direction: "inbound",
+          messageType: "image",
+          body: caption,
+          mediaId:
+            mediaId || null,
+          sentAt,
+        },
+      });
 
       if (!mediaId) {
         await sendWhatsAppMessage(
@@ -331,6 +405,11 @@ export async function POST(
         });
       }
 
+      /*
+       * Receipt OCR is now only reachable after
+       * the WhatsApp sender has been proven to
+       * belong to an existing Minderra user.
+       */
       const reply =
         await handleReceiptImage(
           user.id,
@@ -348,6 +427,17 @@ export async function POST(
     }
 
     if (messageType !== "text") {
+      await prisma.whatsAppMessage.create({
+        data: {
+          userId: user.id,
+          messageId,
+          direction: "inbound",
+          messageType:
+            messageType || "unknown",
+          sentAt,
+        },
+      });
+
       await sendWhatsAppMessage(
         from,
         "I can currently read text messages and receipt photos. Voice notes and other media types aren't supported yet."
@@ -382,25 +472,39 @@ export async function POST(
       });
     }
 
-    const user =
-      await getOrCreateUser(
-        "whatsapp",
-        from
+    await prisma.whatsAppMessage.create({
+      data: {
+        userId: user.id,
+        messageId,
+        direction: "inbound",
+        messageType: "text",
+        body: text,
+        sentAt,
+      },
+    });
+
+    const pendingReceiptReply =
+      await handlePendingReceiptReply(
+        user.id,
+        text
       );
 
     const parsed =
       parseCommand(text);
 
     const reply =
-      parsed
-        ? await routeCommand(
-            user.id,
-            parsed
-          )
-        : await handleForwardedSms(
-            user.id,
-            text
-          );
+      pendingReceiptReply ??
+      (
+        parsed
+          ? await routeCommand(
+              user.id,
+              parsed
+            )
+          : await handleForwardedSms(
+              user.id,
+              text
+            )
+      );
 
     await sendWhatsAppMessage(
       from,
