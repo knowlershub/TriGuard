@@ -11,7 +11,14 @@ export async function handleEmailCommand(userId: string): Promise<string> {
   });
 
   if (!account) {
-    const authUrl = `${process.env.APP_BASE_URL ?? "http://localhost:3000"}/api/auth/gmail/start?userId=${userId}`;
+    const appBaseUrl = process.env.APP_BASE_URL;
+
+    if (!appBaseUrl) {
+      return "Gmail isn't connected yet. Please configure the app URL before connecting Gmail.";
+    }
+
+    const authUrl = `${appBaseUrl}/api/auth/gmail/start?userId=${userId}`;
+
     return `Gmail isn't connected yet. Connect it here: ${authUrl}`;
   }
 

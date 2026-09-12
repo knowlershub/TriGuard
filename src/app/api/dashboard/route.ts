@@ -56,17 +56,6 @@ function startOfWeek(date: Date): Date {
 
 export async function GET(req: NextRequest) {
   try {
-    /*
-     * Personal-account path:
-     * authenticated session -> User
-     *
-     * Development fallback:
-     * testUserId -> test User
-     *
-     * This lets us introduce real accounts without
-     * breaking the existing test/Claude workflow.
-     */
-    const testUserId = req.nextUrl.searchParams.get("testUserId");
     const resolved = await resolveApiUser();
 
     if (resolved.status !== 200) {

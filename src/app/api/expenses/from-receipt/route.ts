@@ -31,7 +31,6 @@ export async function POST(req: NextRequest) {
     }
 
     const {
-      testUserId,
       merchant,
       amount,
       currency,

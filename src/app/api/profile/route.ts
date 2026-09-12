@@ -23,7 +23,6 @@ export async function PATCH(
     }
 
     const {
-      testUserId,
       displayName,
     } = body;
 
