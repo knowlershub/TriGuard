@@ -12,6 +12,9 @@ import {
   parseCommand,
   routeCommand,
 } from "@/lib/commandRouter";
+import {
+  parseIncomingWhatsAppTextMessage,
+} from "@/lib/whatsapp/parseIncomingMessage";
 import { handleForwardedSms } from "@/lib/handlers/smsForward";
 import {
   handlePendingReceiptReply,
@@ -448,23 +451,14 @@ export async function POST(
       });
     }
 
-    const textPayload =
-      incomingMessage.text;
-
-    const textObject =
-      textPayload &&
-      typeof textPayload === "object"
-        ? textPayload as Record<
-            string,
-            unknown
-          >
-        : null;
+    const parsedIncomingMessage =
+      parseIncomingWhatsAppTextMessage(
+        body
+      );
 
     const text =
-      typeof textObject?.body ===
-      "string"
-        ? textObject.body.trim()
-        : "";
+      parsedIncomingMessage?.text ??
+      "";
 
     if (!text) {
       return NextResponse.json({
