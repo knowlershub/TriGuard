@@ -34,6 +34,9 @@ export default function SignupPage() {
   const [loading, setLoading] =
     useState(false);
 
+  const [googleLoading, setGoogleLoading] =
+    useState(false);
+
   useEffect(() => {
     if (sessionStatus === "authenticated") {
       router.replace("/dashboard");
@@ -126,6 +129,14 @@ export default function SignupPage() {
     }
   }
 
+  function handleGoogleSignUp() {
+    setError(null);
+    setGoogleLoading(true);
+
+    window.location.href =
+      "/api/signin/google?callbackUrl=%2Fdashboard";
+  }
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
       <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -163,6 +174,48 @@ export default function SignupPage() {
             {error}
           </div>
         )}
+
+        <button
+          type="button"
+          onClick={handleGoogleSignUp}
+          disabled={googleLoading || loading}
+          className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            className="h-5 w-5"
+          >
+            <path
+              fill="#4285F4"
+              d="M21.35 12.23c0-.79-.07-1.55-.22-2.27H12v4.3h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.14c1.84-1.69 2.91-4.18 2.91-7.42Z"
+            />
+            <path
+              fill="#34A853"
+              d="M12 21.6c2.63 0 4.84-.87 6.45-2.35l-3.14-2.45c-.87.58-1.98.92-3.31.92-2.54 0-4.7-1.72-5.48-4.03H3.27v2.53A9.75 9.75 0 0 0 12 21.6Z"
+            />
+            <path
+              fill="#FBBC05"
+              d="M6.52 13.69a5.86 5.86 0 0 1 0-3.38V7.78H3.27a9.72 9.72 0 0 0 0 8.44l3.25-2.53Z"
+            />
+            <path
+              fill="#EA4335"
+              d="M12 6.28c1.43 0 2.72.49 3.73 1.46l2.8-2.8C16.84 3.37 14.63 2.4 12 2.4a9.75 9.75 0 0 0-8.73 5.38l3.25 2.53C7.3 8 9.46 6.28 12 6.28Z"
+            />
+          </svg>
+
+          {googleLoading
+            ? "Connecting to Google..."
+            : "Continue with Google"}
+        </button>
+
+        <div className="my-6 flex items-center gap-3">
+          <div className="h-px flex-1 bg-slate-200" />
+          <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
+            or
+          </span>
+          <div className="h-px flex-1 bg-slate-200" />
+        </div>
 
         <form
           onSubmit={handleSubmit}
@@ -261,14 +314,14 @@ export default function SignupPage() {
                 )
               }
               className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              placeholder="Repeat your password"
+              placeholder="Re-enter your password"
             />
           </div>
 
           <button
             type="submit"
-            disabled={loading}
-            className="w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={loading || googleLoading}
+            className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading
               ? "Creating account..."
@@ -282,7 +335,7 @@ export default function SignupPage() {
             href="/login"
             className="font-semibold text-blue-600 hover:text-blue-700"
           >
-            Sign in
+            Log in
           </Link>
         </p>
       </div>
