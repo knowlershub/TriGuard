@@ -8,5 +8,10 @@ export async function GET(request: Request) {
 
   return signIn("google", {
     redirectTo: callbackUrl,
+    authorization: {
+      params: {
+        prompt: "select_account",
+      },
+    },
   });
 }
