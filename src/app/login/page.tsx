@@ -93,20 +93,12 @@ export default function LoginPage() {
     }
   }
 
-  async function handleGoogleSignIn() {
+  function handleGoogleSignIn() {
     setError(null);
     setGoogleLoading(true);
 
-    try {
-      await signIn("google", {
-        callbackUrl: "/dashboard",
-      });
-    } catch {
-      setGoogleLoading(false);
-      setError(
-        "Unable to continue with Google right now."
-      );
-    }
+    window.location.href =
+      "/api/signin/google?callbackUrl=%2Fdashboard";
   }
 
   return (
